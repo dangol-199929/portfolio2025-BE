@@ -41,8 +41,8 @@ exports.initSchema = initSchema;
 const better_sqlite3_1 = __importDefault(require("better-sqlite3"));
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
-const dbPath = process.env.DATABASE_PATH || path.join(process.cwd(), 'data', 'portfolio.db');
-const schemaPath = path.join(__dirname, 'schema.sql');
+const dbPath = process.env.DATABASE_PATH || path.join(process.cwd(), "data", "portfolio.db");
+const schemaPath = path.join(__dirname, "schema.sql");
 function ensureDbDir() {
     const dir = path.dirname(dbPath);
     if (!fs.existsSync(dir)) {
@@ -50,7 +50,7 @@ function ensureDbDir() {
     }
 }
 function initSchema(dbInstance) {
-    const schema = fs.readFileSync(schemaPath, 'utf-8');
+    const schema = fs.readFileSync(schemaPath, "utf-8");
     dbInstance.exec(schema);
 }
 ensureDbDir();

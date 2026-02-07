@@ -10,7 +10,8 @@ function validateBody(schema) {
         }
         catch (e) {
             if (e instanceof zod_1.ZodError) {
-                const msg = e.issues.map((err) => err.message).join('; ') || 'Validation failed';
+                const msg = e.issues.map((err) => err.message).join("; ") ||
+                    "Validation failed";
                 const err = new Error(msg);
                 err.statusCode = 400;
                 err.expose = true;

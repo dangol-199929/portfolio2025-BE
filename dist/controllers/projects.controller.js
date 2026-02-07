@@ -1,22 +1,19 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getAll = getAll;
 exports.createOne = createOne;
 exports.updateOne = updateOne;
 exports.deleteOne = deleteOne;
-const db_1 = __importDefault(require("../db"));
+const projects_repository_1 = require("../db/projects.repository");
 const defaults = {
-    liveUrl: '#',
-    githubUrl: '#',
+    liveUrl: "#",
+    githubUrl: "#",
     tags: [],
     metrics: [],
-    title: '',
-    description: '',
-    fullDescription: '',
-    image: '',
+    title: "",
+    description: "",
+    fullDescription: "",
+    image: "",
 };
 function applyDefaults(body) {
     return {
@@ -37,16 +34,16 @@ function rowToProject(row) {
         description: row.description,
         fullDescription: row.fullDescription,
         image: row.image,
-        tags: JSON.parse(row.tags || '[]'),
+        tags: JSON.parse(row.tags || "[]"),
         liveUrl: row.liveUrl,
         githubUrl: row.githubUrl,
-        metrics: JSON.parse(row.metrics || '[]'),
+        metrics: JSON.parse(row.metrics || "[]"),
     };
 }
 function getAll(_req, res, next) {
     try {
-        const rows = db_1.default.prepare('SELECT * FROM projects ORDER BY id').all();
-        res.status(200).json(rows.map(rowToProject));
+        const projects = (0, projects_repository_1.getAllProjects)();
+        res.status(200).json(projects);
     }
     catch {
         res.status(200).json([]);
@@ -55,16 +52,22 @@ function getAll(_req, res, next) {
 function createOne(req, res, next) {
     const body = applyDefaults(req.body);
     const id = Date.now().toString();
-    const tagsJson = JSON.stringify(body.tags);
-    const metricsJson = JSON.stringify(body.metrics);
-    const stmt = db_1.default.prepare('INSERT INTO projects (id, title, description, fullDescription, image, tags, liveUrl, githubUrl, metrics) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
     try {
-        stmt.run(id, body.title, body.description, body.fullDescription, body.image, tagsJson, body.liveUrl, body.githubUrl, metricsJson);
-        const row = db_1.default.prepare('SELECT * FROM projects WHERE id = ?').get(id);
-        res.status(201).json(rowToProject(row));
+        const row = (0, projects_repository_1.insertProject)({
+            id,
+            title: body.title,
+            description: body.description,
+            fullDescription: body.fullDescription,
+            image: body.image,
+            tags: body.tags,
+            liveUrl: body.liveUrl,
+            githubUrl: body.githubUrl,
+            metrics: body.metrics,
+        });
+        res.status(201).json(row);
     }
     catch {
-        const err = new Error('Failed to create project');
+        const err = new Error("Failed to create project");
         err.statusCode = 500;
         err.expose = true;
         next(err);
@@ -74,19 +77,19 @@ function updateOne(req, res, next) {
     const body = req.body;
     const { id } = body;
     if (!id) {
-        const err = new Error('id is required');
+        const err = new Error("id is required");
         err.statusCode = 400;
         err.expose = true;
         return next(err);
     }
-    const existing = db_1.default.prepare('SELECT * FROM projects WHERE id = ?').get(id);
+    const existing = (0, projects_repository_1.findProjectById)(id);
     if (!existing) {
-        const err = new Error('Project not found');
+        const err = new Error("Project not found");
         err.statusCode = 404;
         err.expose = true;
         return next(err);
     }
-    const current = rowToProject(existing);
+    const current = existing;
     const merged = {
         id,
         title: body.title ?? current.title,
@@ -98,15 +101,12 @@ function updateOne(req, res, next) {
         githubUrl: body.githubUrl ?? current.githubUrl,
         metrics: Array.isArray(body.metrics) ? body.metrics : current.metrics,
     };
-    const tagsJson = JSON.stringify(merged.tags);
-    const metricsJson = JSON.stringify(merged.metrics);
-    const stmt = db_1.default.prepare('UPDATE projects SET title = ?, description = ?, fullDescription = ?, image = ?, tags = ?, liveUrl = ?, githubUrl = ?, metrics = ? WHERE id = ?');
     try {
-        stmt.run(merged.title, merged.description, merged.fullDescription, merged.image, tagsJson, merged.liveUrl, merged.githubUrl, metricsJson, id);
-        res.status(200).json(merged);
+        const updated = (0, projects_repository_1.updateProject)(merged);
+        res.status(200).json(updated);
     }
     catch {
-        const err = new Error('Failed to update project');
+        const err = new Error("Failed to update project");
         err.statusCode = 500;
         err.expose = true;
         next(err);
@@ -115,24 +115,24 @@ function updateOne(req, res, next) {
 function deleteOne(req, res, next) {
     const id = req.query.id;
     if (!id) {
-        const err = new Error('ID is required');
+        const err = new Error("ID is required");
         err.statusCode = 400;
         err.expose = true;
         return next(err);
     }
-    const existing = db_1.default.prepare('SELECT id FROM projects WHERE id = ?').get(id);
+    const existing = (0, projects_repository_1.findProjectById)(id);
     if (!existing) {
-        const err = new Error('Project not found');
+        const err = new Error("Project not found");
         err.statusCode = 404;
         err.expose = true;
         return next(err);
     }
     try {
-        db_1.default.prepare('DELETE FROM projects WHERE id = ?').run(id);
+        (0, projects_repository_1.deleteProject)(id);
         res.status(200).json({ success: true });
     }
     catch {
-        const err = new Error('Failed to delete project');
+        const err = new Error("Failed to delete project");
         err.statusCode = 500;
         err.expose = true;
         next(err);

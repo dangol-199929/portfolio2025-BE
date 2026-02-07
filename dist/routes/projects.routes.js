@@ -60,8 +60,8 @@ const putSchema = zod_1.z.object({
     metrics: zod_1.z.array(zod_1.z.string()).optional(),
 });
 exports.projectsRouter = (0, express_1.Router)();
-exports.projectsRouter.get('/projects', ctrl.getAll);
-exports.projectsRouter.post('/projects', (0, validate_1.validateBody)(postSchema), ctrl.createOne);
-exports.projectsRouter.put('/projects', (0, validate_1.validateBody)(putSchema), ctrl.updateOne);
-exports.projectsRouter.delete('/projects', ctrl.deleteOne);
+exports.projectsRouter.get("/projects", ctrl.getAll);
+exports.projectsRouter.post("/projects", (0, validate_1.validateBody)(postSchema), ctrl.createOne);
+exports.projectsRouter.put("/projects", (0, validate_1.validateBody)(putSchema), ctrl.updateOne);
+exports.projectsRouter.delete("/projects", ctrl.deleteOne);
 //# sourceMappingURL=projects.routes.js.map

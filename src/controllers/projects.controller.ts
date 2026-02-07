@@ -1,6 +1,12 @@
 import { Request, Response, NextFunction } from "express";
-import db from "../db";
 import { Project } from "../routes/projects.routes";
+import {
+  deleteProject,
+  findProjectById,
+  getAllProjects,
+  insertProject,
+  updateProject,
+} from "../db/projects.repository";
 
 const defaults = {
   liveUrl: "#",
@@ -42,10 +48,8 @@ function rowToProject(row: Record<string, unknown>): Project {
 
 export function getAll(_req: Request, res: Response, next: NextFunction): void {
   try {
-    const rows = db
-      .prepare("SELECT * FROM projects ORDER BY id")
-      .all() as Record<string, unknown>[];
-    res.status(200).json(rows.map(rowToProject));
+    const projects = getAllProjects();
+    res.status(200).json(projects);
   } catch {
     res.status(200).json([]);
   }
@@ -58,27 +62,19 @@ export function createOne(
 ): void {
   const body = applyDefaults(req.body as Partial<Project>);
   const id = Date.now().toString();
-  const tagsJson = JSON.stringify(body.tags);
-  const metricsJson = JSON.stringify(body.metrics);
-  const stmt = db.prepare(
-    "INSERT INTO projects (id, title, description, fullDescription, image, tags, liveUrl, githubUrl, metrics) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-  );
   try {
-    stmt.run(
+    const row = insertProject({
       id,
-      body.title,
-      body.description,
-      body.fullDescription,
-      body.image,
-      tagsJson,
-      body.liveUrl,
-      body.githubUrl,
-      metricsJson,
-    );
-    const row = db
-      .prepare("SELECT * FROM projects WHERE id = ?")
-      .get(id) as Record<string, unknown>;
-    res.status(201).json(rowToProject(row));
+      title: body.title,
+      description: body.description,
+      fullDescription: body.fullDescription,
+      image: body.image,
+      tags: body.tags,
+      liveUrl: body.liveUrl,
+      githubUrl: body.githubUrl,
+      metrics: body.metrics,
+    });
+    res.status(201).json(row);
   } catch {
     const err = new Error("Failed to create project") as Error & {
       statusCode?: number;
@@ -106,9 +102,7 @@ export function updateOne(
     err.expose = true;
     return next(err);
   }
-  const existing = db.prepare("SELECT * FROM projects WHERE id = ?").get(id) as
-    | Record<string, unknown>
-    | undefined;
+  const existing = findProjectById(id);
   if (!existing) {
     const err = new Error("Project not found") as Error & {
       statusCode?: number;
@@ -118,7 +112,7 @@ export function updateOne(
     err.expose = true;
     return next(err);
   }
-  const current = rowToProject(existing);
+  const current = existing;
   const merged: Project = {
     id,
     title: body.title ?? current.title,
@@ -130,24 +124,9 @@ export function updateOne(
     githubUrl: body.githubUrl ?? current.githubUrl,
     metrics: Array.isArray(body.metrics) ? body.metrics : current.metrics,
   };
-  const tagsJson = JSON.stringify(merged.tags);
-  const metricsJson = JSON.stringify(merged.metrics);
-  const stmt = db.prepare(
-    "UPDATE projects SET title = ?, description = ?, fullDescription = ?, image = ?, tags = ?, liveUrl = ?, githubUrl = ?, metrics = ? WHERE id = ?",
-  );
   try {
-    stmt.run(
-      merged.title,
-      merged.description,
-      merged.fullDescription,
-      merged.image,
-      tagsJson,
-      merged.liveUrl,
-      merged.githubUrl,
-      metricsJson,
-      id,
-    );
-    res.status(200).json(merged);
+    const updated = updateProject(merged);
+    res.status(200).json(updated);
   } catch {
     const err = new Error("Failed to update project") as Error & {
       statusCode?: number;
@@ -174,7 +153,7 @@ export function deleteOne(
     err.expose = true;
     return next(err);
   }
-  const existing = db.prepare("SELECT id FROM projects WHERE id = ?").get(id);
+  const existing = findProjectById(id);
   if (!existing) {
     const err = new Error("Project not found") as Error & {
       statusCode?: number;
@@ -185,7 +164,7 @@ export function deleteOne(
     return next(err);
   }
   try {
-    db.prepare("DELETE FROM projects WHERE id = ?").run(id);
+    deleteProject(id);
     res.status(200).json({ success: true });
   } catch {
     const err = new Error("Failed to delete project") as Error & {

@@ -36,11 +36,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.postUpload = postUpload;
 const path = __importStar(require("path"));
 const fs = __importStar(require("fs"));
-const ALLOWED_MIMES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+const ALLOWED_MIMES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 function postUpload(req, res, next) {
     const file = req.file;
     if (!file) {
-        const err = new Error('No file uploaded');
+        const err = new Error("No file uploaded");
         err.statusCode = 400;
         err.expose = true;
         return next(err);
@@ -50,9 +50,11 @@ function postUpload(req, res, next) {
             try {
                 fs.unlinkSync(file.path);
             }
-            catch { /* ignore */ }
+            catch {
+                /* ignore */
+            }
         }
-        const err = new Error('Only image files are allowed');
+        const err = new Error("Only image files are allowed");
         err.statusCode = 400;
         err.expose = true;
         return next(err);

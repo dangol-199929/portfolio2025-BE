@@ -41,21 +41,23 @@ exports.postResume = postResume;
 const path = __importStar(require("path"));
 const fs = __importStar(require("fs"));
 const db_1 = __importDefault(require("../db"));
-const ALLOWED_MIME = 'application/pdf';
+const ALLOWED_MIME = "application/pdf";
 function getResume(_req, res, next) {
     try {
-        const row = db_1.default.prepare('SELECT resumePath FROM settings WHERE id = 1').get();
-        const resumePath = row?.resumePath ?? '/resume/Resume.pdf';
+        const row = db_1.default
+            .prepare("SELECT resumePath FROM settings WHERE id = 1")
+            .get();
+        const resumePath = row?.resumePath ?? "/resume/Resume.pdf";
         res.status(200).json({ resumePath });
     }
     catch {
-        res.status(200).json({ resumePath: '/resume/Resume.pdf' });
+        res.status(200).json({ resumePath: "/resume/Resume.pdf" });
     }
 }
 function postResume(req, res, next) {
     const file = req.file;
     if (!file) {
-        const err = new Error('No file uploaded');
+        const err = new Error("No file uploaded");
         err.statusCode = 400;
         err.expose = true;
         return next(err);
@@ -65,20 +67,22 @@ function postResume(req, res, next) {
             try {
                 fs.unlinkSync(file.path);
             }
-            catch { /* ignore */ }
+            catch {
+                /* ignore */
+            }
         }
-        const err = new Error('Only PDF files are allowed');
+        const err = new Error("Only PDF files are allowed");
         err.statusCode = 400;
         err.expose = true;
         return next(err);
     }
     const resumePath = `/resume/${path.basename(file.path)}`;
     try {
-        db_1.default.prepare('UPDATE settings SET resumePath = ? WHERE id = 1').run(resumePath);
+        db_1.default.prepare("UPDATE settings SET resumePath = ? WHERE id = 1").run(resumePath);
         res.status(200).json({ resumePath, success: true });
     }
     catch {
-        const err = new Error('Failed to upload resume');
+        const err = new Error("Failed to upload resume");
         err.statusCode = 500;
         err.expose = true;
         next(err);

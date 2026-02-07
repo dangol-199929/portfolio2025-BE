@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response, NextFunction } from "express";
 export declare function getAll(_req: Request, res: Response, next: NextFunction): void;
 export declare function createOne(req: Request, res: Response, next: NextFunction): void;
 export declare function updateOne(req: Request, res: Response, next: NextFunction): void;

@@ -42,18 +42,18 @@ const multer_1 = __importDefault(require("multer"));
 const path = __importStar(require("path"));
 const fs = __importStar(require("fs"));
 const ctrl = __importStar(require("../controllers/upload.controller"));
-const uploadsDir = path.join(process.cwd(), 'uploads');
+const uploadsDir = path.join(process.cwd(), "uploads");
 if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
 }
 const storage = multer_1.default.diskStorage({
     destination: (_req, _file, cb) => cb(null, uploadsDir),
     filename: (_req, file, cb) => {
-        const ext = path.extname(file.originalname) || '.png';
+        const ext = path.extname(file.originalname) || ".png";
         cb(null, `project-${Date.now()}${ext}`);
     },
 });
 const upload = (0, multer_1.default)({ storage });
 exports.uploadRouter = (0, express_1.Router)();
-exports.uploadRouter.post('/upload', upload.single('file'), ctrl.postUpload);
+exports.uploadRouter.post("/upload", upload.single("file"), ctrl.postUpload);
 //# sourceMappingURL=upload.routes.js.map

@@ -42,7 +42,7 @@ const multer_1 = __importDefault(require("multer"));
 const path = __importStar(require("path"));
 const fs = __importStar(require("fs"));
 const ctrl = __importStar(require("../controllers/resume.controller"));
-const resumeDir = path.join(process.cwd(), 'resume');
+const resumeDir = path.join(process.cwd(), "resume");
 if (!fs.existsSync(resumeDir)) {
     fs.mkdirSync(resumeDir, { recursive: true });
 }
@@ -52,6 +52,6 @@ const storage = multer_1.default.diskStorage({
 });
 const upload = (0, multer_1.default)({ storage });
 exports.resumeRouter = (0, express_1.Router)();
-exports.resumeRouter.get('/resume', ctrl.getResume);
-exports.resumeRouter.post('/resume', upload.single('file'), ctrl.postResume);
+exports.resumeRouter.get("/resume", ctrl.getResume);
+exports.resumeRouter.post("/resume", upload.single("file"), ctrl.postResume);
 //# sourceMappingURL=resume.routes.js.map

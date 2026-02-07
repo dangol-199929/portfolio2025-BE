@@ -43,7 +43,7 @@ const postSchema = zod_1.z.object({
     company: zod_1.z.string().optional(),
     period: zod_1.z.string().optional(),
     description: zod_1.z.string().optional(),
-    side: zod_1.z.enum(['left', 'right']).optional(),
+    side: zod_1.z.enum(["left", "right"]).optional(),
 });
 const putSchema = zod_1.z.object({
     id: zod_1.z.string(),
@@ -51,11 +51,11 @@ const putSchema = zod_1.z.object({
     company: zod_1.z.string().optional(),
     period: zod_1.z.string().optional(),
     description: zod_1.z.string().optional(),
-    side: zod_1.z.enum(['left', 'right']).optional(),
+    side: zod_1.z.enum(["left", "right"]).optional(),
 });
 exports.experiencesRouter = (0, express_1.Router)();
-exports.experiencesRouter.get('/experiences', ctrl.getAll);
-exports.experiencesRouter.post('/experiences', (0, validate_1.validateBody)(postSchema), ctrl.createOne);
-exports.experiencesRouter.put('/experiences', (0, validate_1.validateBody)(putSchema), ctrl.updateOne);
-exports.experiencesRouter.delete('/experiences', ctrl.deleteOne);
+exports.experiencesRouter.get("/experiences", ctrl.getAll);
+exports.experiencesRouter.post("/experiences", (0, validate_1.validateBody)(postSchema), ctrl.createOne);
+exports.experiencesRouter.put("/experiences", (0, validate_1.validateBody)(putSchema), ctrl.updateOne);
+exports.experiencesRouter.delete("/experiences", ctrl.deleteOne);
 //# sourceMappingURL=experiences.routes.js.map

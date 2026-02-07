@@ -1,13 +1,18 @@
 import { Request, Response, NextFunction } from "express";
-import db from "../db";
 import { Experience } from "../routes/experiences.routes";
+import {
+  countExperiences,
+  deleteExperience,
+  findExperienceById,
+  getAllExperiences,
+  insertExperience,
+  updateExperience,
+} from "../db/experiences.repository";
 
 export function getAll(_req: Request, res: Response, next: NextFunction): void {
   try {
-    const rows = db
-      .prepare("SELECT * FROM experiences ORDER BY id")
-      .all() as Experience[];
-    res.status(200).json(rows);
+    const experiences = getAllExperiences();
+    res.status(200).json(experiences);
   } catch {
     res.status(200).json([]);
   }
@@ -22,26 +27,18 @@ export function createOne(
   const id = Date.now().toString();
   let side = body.side;
   if (side !== "left" && side !== "right") {
-    const count = (
-      db.prepare("SELECT COUNT(*) as c FROM experiences").get() as { c: number }
-    ).c;
+    const count = countExperiences();
     side = count % 2 === 0 ? "right" : "left";
   }
-  const stmt = db.prepare(
-    "INSERT INTO experiences (id, title, company, period, description, side) VALUES (?, ?, ?, ?, ?, ?)",
-  );
   try {
-    stmt.run(
+    const row = insertExperience({
       id,
-      body.title ?? "",
-      body.company ?? "",
-      body.period ?? "",
-      body.description ?? "",
+      title: body.title ?? "",
+      company: body.company ?? "",
+      period: body.period ?? "",
+      description: body.description ?? "",
       side,
-    );
-    const row = db
-      .prepare("SELECT * FROM experiences WHERE id = ?")
-      .get(id) as Experience;
+    });
     res.status(201).json(row);
   } catch {
     const err = new Error("Failed to create experience") as Error & {
@@ -70,9 +67,7 @@ export function updateOne(
     err.expose = true;
     return next(err);
   }
-  const existing = db
-    .prepare("SELECT id FROM experiences WHERE id = ?")
-    .get(id);
+  const existing = findExperienceById(id);
   if (!existing) {
     const err = new Error("Experience not found") as Error & {
       statusCode?: number;
@@ -82,21 +77,15 @@ export function updateOne(
     err.expose = true;
     return next(err);
   }
-  const stmt = db.prepare(
-    "UPDATE experiences SET title = ?, company = ?, period = ?, description = ?, side = ? WHERE id = ?",
-  );
   try {
-    stmt.run(
-      title ?? "",
-      company ?? "",
-      period ?? "",
-      description ?? "",
-      side ?? "right",
+    const row = updateExperience({
       id,
-    );
-    const row = db
-      .prepare("SELECT * FROM experiences WHERE id = ?")
-      .get(id) as Experience;
+      title: title ?? "",
+      company: company ?? "",
+      period: period ?? "",
+      description: description ?? "",
+      side: side ?? "right",
+    });
     res.status(200).json(row);
   } catch {
     const err = new Error("Failed to update experience") as Error & {
@@ -124,9 +113,7 @@ export function deleteOne(
     err.expose = true;
     return next(err);
   }
-  const existing = db
-    .prepare("SELECT id FROM experiences WHERE id = ?")
-    .get(id);
+  const existing = findExperienceById(id);
   if (!existing) {
     const err = new Error("Experience not found") as Error & {
       statusCode?: number;
@@ -137,7 +124,7 @@ export function deleteOne(
     return next(err);
   }
   try {
-    db.prepare("DELETE FROM experiences WHERE id = ?").run(id);
+    deleteExperience(id);
     res.status(200).json({ success: true });
   } catch {
     const err = new Error("Failed to delete experience") as Error & {
