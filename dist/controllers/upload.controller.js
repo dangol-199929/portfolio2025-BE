@@ -34,10 +34,15 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.postUpload = postUpload;
-const path = __importStar(require("path"));
 const fs = __importStar(require("fs"));
+const path = __importStar(require("path"));
+const objectStorage_1 = require("../lib/objectStorage");
 const ALLOWED_MIMES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-function postUpload(req, res, next) {
+function buildImageName(originalName) {
+    const ext = path.extname(originalName) || ".png";
+    return `project-${Date.now()}${ext.toLowerCase()}`;
+}
+async function postUpload(req, res, next) {
     const file = req.file;
     if (!file) {
         const err = new Error("No file uploaded");
@@ -46,20 +51,34 @@ function postUpload(req, res, next) {
         return next(err);
     }
     if (!ALLOWED_MIMES.includes(file.mimetype)) {
-        if (fs.existsSync(file.path)) {
-            try {
-                fs.unlinkSync(file.path);
-            }
-            catch {
-                /* ignore */
-            }
-        }
         const err = new Error("Only image files are allowed");
         err.statusCode = 400;
         err.expose = true;
         return next(err);
     }
-    const filePath = `/uploads/${path.basename(file.path)}`;
-    res.status(200).json({ path: filePath, success: true });
+    const fileName = buildImageName(file.originalname);
+    try {
+        if ((0, objectStorage_1.isS3Configured)()) {
+            await (0, objectStorage_1.uploadObject)({
+                key: `uploads/${fileName}`,
+                body: file.buffer,
+                contentType: file.mimetype,
+            });
+        }
+        else {
+            const uploadsDir = path.join(process.cwd(), "uploads");
+            if (!fs.existsSync(uploadsDir)) {
+                fs.mkdirSync(uploadsDir, { recursive: true });
+            }
+            fs.writeFileSync(path.join(uploadsDir, fileName), file.buffer);
+        }
+        res.status(200).json({ path: `/uploads/${fileName}`, success: true });
+    }
+    catch {
+        const err = new Error("Failed to upload image");
+        err.statusCode = 500;
+        err.expose = true;
+        next(err);
+    }
 }
 //# sourceMappingURL=upload.controller.js.map

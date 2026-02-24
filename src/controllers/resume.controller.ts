@@ -1,31 +1,33 @@
 import { Request, Response, NextFunction } from "express";
-import * as path from "path";
 import * as fs from "fs";
-import db from "../db";
+import * as path from "path";
+import { isS3Configured, uploadObject } from "../lib/objectStorage";
+import { getResumePath, setResumePath } from "../db/settings.repository";
 
 const ALLOWED_MIME = "application/pdf";
 
-export function getResume(
+function buildResumeFileName(): string {
+  return `resume-${Date.now()}.pdf`;
+}
+
+export async function getResume(
   _req: Request,
   res: Response,
-  next: NextFunction,
-): void {
+  _next: NextFunction,
+): Promise<void> {
   try {
-    const row = db
-      .prepare("SELECT resumePath FROM settings WHERE id = 1")
-      .get() as { resumePath: string } | undefined;
-    const resumePath = row?.resumePath ?? "/resume/Resume.pdf";
+    const resumePath = await getResumePath();
     res.status(200).json({ resumePath });
   } catch {
     res.status(200).json({ resumePath: "/resume/Resume.pdf" });
   }
 }
 
-export function postResume(
+export async function postResume(
   req: Request,
   res: Response,
   next: NextFunction,
-): void {
+): Promise<void> {
   const file = req.file;
   if (!file) {
     const err = new Error("No file uploaded") as Error & {
@@ -36,14 +38,8 @@ export function postResume(
     err.expose = true;
     return next(err);
   }
+
   if (file.mimetype !== ALLOWED_MIME) {
-    if (fs.existsSync(file.path)) {
-      try {
-        fs.unlinkSync(file.path);
-      } catch {
-        /* ignore */
-      }
-    }
     const err = new Error("Only PDF files are allowed") as Error & {
       statusCode?: number;
       expose?: boolean;
@@ -52,11 +48,26 @@ export function postResume(
     err.expose = true;
     return next(err);
   }
-  const resumePath = `/resume/${path.basename(file.path)}`;
+
+  const fileName = buildResumeFileName();
+  const resumePath = `/resume/${fileName}`;
+
   try {
-    db.prepare("UPDATE settings SET resumePath = ? WHERE id = 1").run(
-      resumePath,
-    );
+    if (isS3Configured()) {
+      await uploadObject({
+        key: `resume/${fileName}`,
+        body: file.buffer,
+        contentType: file.mimetype,
+      });
+    } else {
+      const resumeDir = path.join(process.cwd(), "resume");
+      if (!fs.existsSync(resumeDir)) {
+        fs.mkdirSync(resumeDir, { recursive: true });
+      }
+      fs.writeFileSync(path.join(resumeDir, fileName), file.buffer);
+    }
+
+    await setResumePath(resumePath);
     res.status(200).json({ resumePath, success: true });
   } catch {
     const err = new Error("Failed to upload resume") as Error & {

@@ -1,6 +1,11 @@
-import db from "./index";
 import { Project } from "../routes/projects.routes";
+import { getPrisma, usePrisma } from "../lib/prisma";
 import { logger } from "../utils/logger";
+import { getSqliteDb } from "./index";
+
+function sqlite() {
+  return getSqliteDb();
+}
 
 function rowToProject(row: Record<string, unknown>): Project {
   return {
@@ -40,9 +45,26 @@ function projectToRow(project: Project): {
   };
 }
 
-export function getAllProjects(): Project[] {
+export async function getAllProjects(): Promise<Project[]> {
   try {
-    const rows = db
+    if (usePrisma()) {
+      const rows = await getPrisma().project.findMany({
+        orderBy: { id: "asc" },
+      });
+      return rows.map((r) => ({
+        id: r.id,
+        title: r.title,
+        description: r.description,
+        fullDescription: r.fullDescription,
+        image: r.image,
+        tags: JSON.parse(r.tags || "[]") as string[],
+        liveUrl: r.liveUrl,
+        githubUrl: r.githubUrl,
+        metrics: JSON.parse(r.metrics || "[]") as string[],
+      }));
+    }
+
+    const rows = sqlite()
       .prepare("SELECT * FROM projects ORDER BY id")
       .all() as Record<string, unknown>[];
     return rows.map(rowToProject);
@@ -52,9 +74,27 @@ export function getAllProjects(): Project[] {
   }
 }
 
-export function findProjectById(id: string): Project | undefined {
+export async function findProjectById(
+  id: string,
+): Promise<Project | undefined> {
   try {
-    const row = db.prepare("SELECT * FROM projects WHERE id = ?").get(id) as
+    if (usePrisma()) {
+      const r = await getPrisma().project.findUnique({ where: { id } });
+      if (!r) return undefined;
+      return {
+        id: r.id,
+        title: r.title,
+        description: r.description,
+        fullDescription: r.fullDescription,
+        image: r.image,
+        tags: JSON.parse(r.tags || "[]") as string[],
+        liveUrl: r.liveUrl,
+        githubUrl: r.githubUrl,
+        metrics: JSON.parse(r.metrics || "[]") as string[],
+      };
+    }
+
+    const row = sqlite().prepare("SELECT * FROM projects WHERE id = ?").get(id) as
       | Record<string, unknown>
       | undefined;
     return row ? rowToProject(row) : undefined;
@@ -64,12 +104,39 @@ export function findProjectById(id: string): Project | undefined {
   }
 }
 
-export function insertProject(project: Project): Project {
+export async function insertProject(project: Project): Promise<Project> {
   const row = projectToRow(project);
-  const stmt = db.prepare(
-    "INSERT INTO projects (id, title, description, fullDescription, image, tags, liveUrl, githubUrl, metrics) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-  );
   try {
+    if (usePrisma()) {
+      const created = await getPrisma().project.create({
+        data: {
+          id: row.id,
+          title: row.title,
+          description: row.description,
+          fullDescription: row.fullDescription,
+          image: row.image,
+          tags: row.tags,
+          liveUrl: row.liveUrl,
+          githubUrl: row.githubUrl,
+          metrics: row.metrics,
+        },
+      });
+      return {
+        id: created.id,
+        title: created.title,
+        description: created.description,
+        fullDescription: created.fullDescription,
+        image: created.image,
+        tags: JSON.parse(created.tags || "[]") as string[],
+        liveUrl: created.liveUrl,
+        githubUrl: created.githubUrl,
+        metrics: JSON.parse(created.metrics || "[]") as string[],
+      };
+    }
+
+    const stmt = sqlite().prepare(
+      "INSERT INTO projects (id, title, description, fullDescription, image, tags, liveUrl, githubUrl, metrics) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    );
     stmt.run(
       row.id,
       row.title,
@@ -81,9 +148,10 @@ export function insertProject(project: Project): Project {
       row.githubUrl,
       row.metrics,
     );
-    const inserted = db
-      .prepare("SELECT * FROM projects WHERE id = ?")
-      .get(row.id) as Record<string, unknown>;
+
+    const inserted = sqlite().prepare("SELECT * FROM projects WHERE id = ?").get(
+      row.id,
+    ) as Record<string, unknown>;
     return rowToProject(inserted);
   } catch (error) {
     logger.error("Failed to insert project", { id: project.id, error });
@@ -91,12 +159,39 @@ export function insertProject(project: Project): Project {
   }
 }
 
-export function updateProject(project: Project): Project {
+export async function updateProject(project: Project): Promise<Project> {
   const row = projectToRow(project);
-  const stmt = db.prepare(
-    "UPDATE projects SET title = ?, description = ?, fullDescription = ?, image = ?, tags = ?, liveUrl = ?, githubUrl = ?, metrics = ? WHERE id = ?",
-  );
   try {
+    if (usePrisma()) {
+      const updated = await getPrisma().project.update({
+        where: { id: row.id },
+        data: {
+          title: row.title,
+          description: row.description,
+          fullDescription: row.fullDescription,
+          image: row.image,
+          tags: row.tags,
+          liveUrl: row.liveUrl,
+          githubUrl: row.githubUrl,
+          metrics: row.metrics,
+        },
+      });
+      return {
+        id: updated.id,
+        title: updated.title,
+        description: updated.description,
+        fullDescription: updated.fullDescription,
+        image: updated.image,
+        tags: JSON.parse(updated.tags || "[]") as string[],
+        liveUrl: updated.liveUrl,
+        githubUrl: updated.githubUrl,
+        metrics: JSON.parse(updated.metrics || "[]") as string[],
+      };
+    }
+
+    const stmt = sqlite().prepare(
+      "UPDATE projects SET title = ?, description = ?, fullDescription = ?, image = ?, tags = ?, liveUrl = ?, githubUrl = ?, metrics = ? WHERE id = ?",
+    );
     stmt.run(
       row.title,
       row.description,
@@ -108,9 +203,10 @@ export function updateProject(project: Project): Project {
       row.metrics,
       row.id,
     );
-    const updated = db
-      .prepare("SELECT * FROM projects WHERE id = ?")
-      .get(row.id) as Record<string, unknown>;
+
+    const updated = sqlite().prepare("SELECT * FROM projects WHERE id = ?").get(
+      row.id,
+    ) as Record<string, unknown>;
     return rowToProject(updated);
   } catch (error) {
     logger.error("Failed to update project", { id: project.id, error });
@@ -118,9 +214,14 @@ export function updateProject(project: Project): Project {
   }
 }
 
-export function deleteProject(id: string): void {
+export async function deleteProject(id: string): Promise<void> {
   try {
-    db.prepare("DELETE FROM projects WHERE id = ?").run(id);
+    if (usePrisma()) {
+      await getPrisma().project.delete({ where: { id } });
+      return;
+    }
+
+    sqlite().prepare("DELETE FROM projects WHERE id = ?").run(id);
   } catch (error) {
     logger.error("Failed to delete project", { id, error });
     throw error;

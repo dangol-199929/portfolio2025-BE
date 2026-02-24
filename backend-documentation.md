@@ -81,7 +81,7 @@ Loaded automatically by `dotenv` in `src/server.ts`.
 
 - `PORT`
   - Port the HTTP server listens on.
-  - Default: `8080`.
+  - Default: `3000`.
 - `DATABASE_PATH`
   - Filesystem path for the SQLite database.
   - Default: `./data/portfolio.db`.
@@ -89,7 +89,7 @@ Loaded automatically by `dotenv` in `src/server.ts`.
 Example (`.env.example`):
 
 ```bash
-PORT=8080
+PORT=3000
 DATABASE_PATH=./data/portfolio.db
 ```
 
@@ -98,13 +98,13 @@ DATABASE_PATH=./data/portfolio.db
 For a separate frontend (e.g. Next.js), the key variable is:
 
 - `NEXT_PUBLIC_API_URL` – Base URL for this backend, e.g.:
-  - `http://localhost:8080` (local dev).
+  - `http://localhost:3000` (local dev).
   - `https://api.yourdomain.com` (production over HTTPS).
 
 Example:
 
 ```bash
-NEXT_PUBLIC_API_URL=http://localhost:8080
+NEXT_PUBLIC_API_URL=http://localhost:3000
 ```
 
 ---
@@ -114,7 +114,7 @@ NEXT_PUBLIC_API_URL=http://localhost:8080
 ### 5.1 `src/server.ts`
 
 - Imports `dotenv/config` to load `.env`.
-- Resolves port from `process.env.PORT` or `8080`.
+- Resolves port from `process.env.PORT` or `3000`.
 - Starts Express app from `src/app.ts`:
   - `app.listen(PORT, ...)`.
 
@@ -395,7 +395,7 @@ npm install
 
 ```bash
 cp .env.example .env   # adjust as needed
-npm run dev            # listens on PORT or 8080
+npm run dev            # listens on PORT or 3000
 ```
 
 ### 9.3 Building & running production build
@@ -423,7 +423,7 @@ This section outlines how to extend and harden this backend for production, espe
 **Key points:**
 
 - Entrypoint: `node dist/server.js` (after running `npm run build`).
-- Expose port matching `PORT` (e.g. 8080).
+- Expose port matching `PORT` (e.g. 3000).
 - Mount or bind:
   - `/app/data` → `data/portfolio.db`.
   - `/app/resume` → resume PDFs.
@@ -437,7 +437,7 @@ Possible targets:
 - **ECS Fargate** service:
   - Task definition with:
     - Container image for this backend.
-    - Port mapping (8080 → target group).
+    - Port mapping (3000 → target group).
     - EFS or EBS for database and uploads _or_ move to managed DB (see Prisma below).
   - Application Load Balancer (ALB) in front:
     - Terminates TLS.
@@ -445,7 +445,7 @@ Possible targets:
 
 - **EC2** with Nginx/ALB:
   - Run Node process (or Docker container) on EC2.
-  - Use Nginx or ALB to terminate TLS and proxy to `http://localhost:8080`.
+  - Use Nginx or ALB to terminate TLS and proxy to `http://localhost:3000`.
 
 For both:
 

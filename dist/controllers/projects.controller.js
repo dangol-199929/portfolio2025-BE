@@ -27,33 +27,20 @@ function applyDefaults(body) {
         metrics: Array.isArray(body.metrics) ? body.metrics : defaults.metrics,
     };
 }
-function rowToProject(row) {
-    return {
-        id: row.id,
-        title: row.title,
-        description: row.description,
-        fullDescription: row.fullDescription,
-        image: row.image,
-        tags: JSON.parse(row.tags || "[]"),
-        liveUrl: row.liveUrl,
-        githubUrl: row.githubUrl,
-        metrics: JSON.parse(row.metrics || "[]"),
-    };
-}
-function getAll(_req, res, next) {
+async function getAll(_req, res, next) {
     try {
-        const projects = (0, projects_repository_1.getAllProjects)();
+        const projects = await (0, projects_repository_1.getAllProjects)();
         res.status(200).json(projects);
     }
     catch {
         res.status(200).json([]);
     }
 }
-function createOne(req, res, next) {
+async function createOne(req, res, next) {
     const body = applyDefaults(req.body);
     const id = Date.now().toString();
     try {
-        const row = (0, projects_repository_1.insertProject)({
+        const row = await (0, projects_repository_1.insertProject)({
             id,
             title: body.title,
             description: body.description,
@@ -73,7 +60,7 @@ function createOne(req, res, next) {
         next(err);
     }
 }
-function updateOne(req, res, next) {
+async function updateOne(req, res, next) {
     const body = req.body;
     const { id } = body;
     if (!id) {
@@ -82,27 +69,26 @@ function updateOne(req, res, next) {
         err.expose = true;
         return next(err);
     }
-    const existing = (0, projects_repository_1.findProjectById)(id);
+    const existing = await (0, projects_repository_1.findProjectById)(id);
     if (!existing) {
         const err = new Error("Project not found");
         err.statusCode = 404;
         err.expose = true;
         return next(err);
     }
-    const current = existing;
     const merged = {
         id,
-        title: body.title ?? current.title,
-        description: body.description ?? current.description,
-        fullDescription: body.fullDescription ?? current.fullDescription,
-        image: body.image ?? current.image,
-        tags: Array.isArray(body.tags) ? body.tags : current.tags,
-        liveUrl: body.liveUrl ?? current.liveUrl,
-        githubUrl: body.githubUrl ?? current.githubUrl,
-        metrics: Array.isArray(body.metrics) ? body.metrics : current.metrics,
+        title: body.title ?? existing.title,
+        description: body.description ?? existing.description,
+        fullDescription: body.fullDescription ?? existing.fullDescription,
+        image: body.image ?? existing.image,
+        tags: Array.isArray(body.tags) ? body.tags : existing.tags,
+        liveUrl: body.liveUrl ?? existing.liveUrl,
+        githubUrl: body.githubUrl ?? existing.githubUrl,
+        metrics: Array.isArray(body.metrics) ? body.metrics : existing.metrics,
     };
     try {
-        const updated = (0, projects_repository_1.updateProject)(merged);
+        const updated = await (0, projects_repository_1.updateProject)(merged);
         res.status(200).json(updated);
     }
     catch {
@@ -112,7 +98,7 @@ function updateOne(req, res, next) {
         next(err);
     }
 }
-function deleteOne(req, res, next) {
+async function deleteOne(req, res, next) {
     const id = req.query.id;
     if (!id) {
         const err = new Error("ID is required");
@@ -120,7 +106,7 @@ function deleteOne(req, res, next) {
         err.expose = true;
         return next(err);
     }
-    const existing = (0, projects_repository_1.findProjectById)(id);
+    const existing = await (0, projects_repository_1.findProjectById)(id);
     if (!existing) {
         const err = new Error("Project not found");
         err.statusCode = 404;
@@ -128,7 +114,7 @@ function deleteOne(req, res, next) {
         return next(err);
     }
     try {
-        (0, projects_repository_1.deleteProject)(id);
+        await (0, projects_repository_1.deleteProject)(id);
         res.status(200).json({ success: true });
     }
     catch {

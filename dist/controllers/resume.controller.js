@@ -32,29 +32,27 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getResume = getResume;
 exports.postResume = postResume;
-const path = __importStar(require("path"));
 const fs = __importStar(require("fs"));
-const db_1 = __importDefault(require("../db"));
+const path = __importStar(require("path"));
+const objectStorage_1 = require("../lib/objectStorage");
+const settings_repository_1 = require("../db/settings.repository");
 const ALLOWED_MIME = "application/pdf";
-function getResume(_req, res, next) {
+function buildResumeFileName() {
+    return `resume-${Date.now()}.pdf`;
+}
+async function getResume(_req, res, _next) {
     try {
-        const row = db_1.default
-            .prepare("SELECT resumePath FROM settings WHERE id = 1")
-            .get();
-        const resumePath = row?.resumePath ?? "/resume/Resume.pdf";
+        const resumePath = await (0, settings_repository_1.getResumePath)();
         res.status(200).json({ resumePath });
     }
     catch {
         res.status(200).json({ resumePath: "/resume/Resume.pdf" });
     }
 }
-function postResume(req, res, next) {
+async function postResume(req, res, next) {
     const file = req.file;
     if (!file) {
         const err = new Error("No file uploaded");
@@ -63,22 +61,29 @@ function postResume(req, res, next) {
         return next(err);
     }
     if (file.mimetype !== ALLOWED_MIME) {
-        if (fs.existsSync(file.path)) {
-            try {
-                fs.unlinkSync(file.path);
-            }
-            catch {
-                /* ignore */
-            }
-        }
         const err = new Error("Only PDF files are allowed");
         err.statusCode = 400;
         err.expose = true;
         return next(err);
     }
-    const resumePath = `/resume/${path.basename(file.path)}`;
+    const fileName = buildResumeFileName();
+    const resumePath = `/resume/${fileName}`;
     try {
-        db_1.default.prepare("UPDATE settings SET resumePath = ? WHERE id = 1").run(resumePath);
+        if ((0, objectStorage_1.isS3Configured)()) {
+            await (0, objectStorage_1.uploadObject)({
+                key: `resume/${fileName}`,
+                body: file.buffer,
+                contentType: file.mimetype,
+            });
+        }
+        else {
+            const resumeDir = path.join(process.cwd(), "resume");
+            if (!fs.existsSync(resumeDir)) {
+                fs.mkdirSync(resumeDir, { recursive: true });
+            }
+            fs.writeFileSync(path.join(resumeDir, fileName), file.buffer);
+        }
+        await (0, settings_repository_1.setResumePath)(resumePath);
         res.status(200).json({ resumePath, success: true });
     }
     catch {

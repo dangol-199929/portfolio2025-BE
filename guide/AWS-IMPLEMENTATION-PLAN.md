@@ -12,6 +12,7 @@
 2. **Standardize environment configuration**
    - Confirm `.env` / `.env.example` define `PORT` and `DATABASE_PATH`.
    - Add placeholders for future DB and AWS vars (e.g. `DATABASE_URL`, `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`) without using them yet.
+   - Add a body size limit for JSON (e.g. `express.json({ limit: '1mb' })`) to avoid DoS via large payloads.
 
 3. **Abstract database access behind repositories**
    - Create `src/db/experience.repository.ts` and `src/db/project.repository.ts` that encapsulate all `better-sqlite3` queries.
@@ -69,6 +70,13 @@
       - Error messages and HTTP status codes.
     - Fix any differences so that behavior still matches `api-docs.md`.
 
+**Phase 2 done.** Repositories use Prisma when `DATABASE_URL` (or `DB_*`) is set; otherwise SQLite. To run with Postgres locally:
+
+1. `docker compose up -d` (start Postgres).
+2. In `.env`: `DATABASE_URL=postgresql://portfolio:portfolio@localhost:5432/portfolio?schema=public`
+3. `npm run db:migrate:dev -- --name init` (if migrations not yet applied).
+4. `npm run dev` (app uses Prisma + Postgres).
+
 ---
 
 ## Phase 3 – Dockerization of the Backend
@@ -85,6 +93,7 @@
       - Optionally construct `DATABASE_URL` from `DB_*` envs if needed (reusing logic from the guide).
       - Run `prisma migrate deploy` when `DATABASE_URL` points to a real DB.
       - Execute `node dist/server.js`.
+    - Ensure the Node process handles SIGTERM (graceful shutdown): stop accepting new requests, finish in-flight, then exit so ECS can drain tasks cleanly.
 
 17. **Create a `.dockerignore`**
     - Exclude `node_modules`, `dist`, `.env`, `.git`, local SQLite data, and temporary files to keep the image small and secure.
@@ -119,6 +128,7 @@
 22. **Create RDS PostgreSQL instance**
     - Add an RDS Postgres 16 instance in private subnets.
     - Store DB credentials in Secrets Manager (DB host, port, name, user, password).
+    - Enable automated backups with a retention period (e.g. 7 days); document restore procedure in the runbook.
     - Output the secret ARN and connection info from the CDK stack for later use.
 
 23. **Create ECR repository**
@@ -165,7 +175,8 @@
 29. **Create CI workflow (build and test)**
     - Add `.github/workflows/ci.yml`:
       - Trigger on pull requests and pushes to main.
-      - Steps: checkout → `npm ci` → `npm run build` → (optional) tests.
+      - Steps: checkout → `npm ci` → `npm run build` → run tests (unit/integration as you add them).
+      - Add dependency vulnerability check (e.g. `npm audit --audit-level=high` or Dependabot); fail or warn per policy.
       - Fail on compilation or test errors before deployment happens.
 
 30. **Create deploy workflow (build → push → ECS update)**
@@ -200,54 +211,65 @@
     - Ensure CloudFront only serves HTTPS.
     - Optionally redirect HTTP→HTTPS.
     - Restrict CORS in `app.ts` to known frontend origins (staging/prod URLs).
+    - Add security headers (e.g. Helmet middleware): `X-Content-Type-Options`, `X-Frame-Options`, and other recommended headers to reduce XSS/clickjacking surface.
 
-34. **Encrypt data at rest**
+34. **Add API key authentication**
+    - Store the API key in environment (e.g. `API_KEY`) and in AWS Secrets Manager for ECS; never commit it to the repo.
+    - Add middleware that validates the key on each request (e.g. `Authorization: Bearer <key>` or `X-API-Key` header); return 401 when missing or invalid.
+    - Exempt public/health routes (e.g. `GET /health`, and optionally `GET /experiences`, `GET /projects`) from the check if they should stay unauthenticated.
+    - Use the same key for server-side frontend calls (e.g. Next.js server); document the header and rotation in `api-docs.md` and the runbook.
+
+34a. **Add rate limiting** - Apply rate limiting (per IP and/or per API key) to protect against abuse and brute force (e.g. `express-rate-limit` or ALB/WAF rules). - Use stricter limits for unauthenticated or public routes; optionally higher limits for valid API key. - Return 429 Too Many Requests with a `Retry-After` header when exceeded; document limits in `api-docs.md`.
+
+35. **Encrypt data at rest**
     - Confirm:
       - RDS encryption at rest is enabled.
       - EBS/EFS volumes used by ECS tasks are encrypted.
     - Avoid storing secrets in `.env` in the repo; rely on AWS Secrets Manager and Parameter Store.
 
-35. **Harden error handling**
+36. **Harden error handling**
     - Keep stack traces and internal messages out of 500 responses in production.
     - Optionally add an env flag (e.g. `EXPOSE_ERROR=1`) to show detailed errors only in non‑production environments.
+    - Ensure all mutation endpoints validate and sanitize request body and query params (e.g. Zod or existing `validate` middleware); return 400 with clear messages for invalid input to avoid injection and bad data.
 
-36. **Implement structured logging**
+37. **Implement structured logging**
     - Replace console logs with Pino or similar.
     - Configure ECS task definition to send logs to CloudWatch Logs.
     - Consider adding a request ID per incoming request for traceability.
 
-37. **Add monitoring and alerts**
+38. **Add monitoring and alerts**
     - Define CloudWatch alarms:
       - ALB 5xx rate.
       - ECS task CPU and memory usage.
       - RDS CPU, connections, and storage.
     - Optionally add AWS Budgets to monitor monthly spend.
 
-38. **Document runbooks and operations**
+39. **Document runbooks and operations**
     - In a new `DEPLOYMENT-RUNBOOK.md` (or extend `backend-documentation.md`), document:
       - How to deploy and roll back.
-      - How to rotate DB credentials.
+      - How to rotate DB credentials and API keys.
+      - How to restore from RDS backups if needed.
       - How to recover from common failures (ECS task failing, RDS down, etc.).
 
 ---
 
 ## Phase 7 – Optional Enhancements
 
-39. **Migrate uploads and resume to S3**
+40. **Migrate uploads and resume to S3**
     - Create S3 buckets for resumes and uploads.
     - Update controllers to:
       - Upload files to S3 instead of local disk.
       - Return S3/CloudFront URLs in `resumePath` and `path` fields.
     - Optionally put CloudFront in front of these S3 buckets.
 
-40. **Add staging environment**
+41. **Add staging environment**
     - Duplicate the stack for a `staging` environment:
       - Separate ECS service, RDS instance, and CloudFront distribution.
     - Extend CI/CD to:
       - Deploy to staging on every push to main.
       - Deploy to prod only on tagged releases or manual approvals.
 
-41. **Performance and cost tuning**
+42. **Performance and cost tuning**
     - Profile API latency and DB usage.
     - Right‑size Fargate task CPU/memory and RDS instance class based on CloudWatch metrics.
     - Refine auto‑scaling rules for ECS (e.g. scale on CPU or request count).

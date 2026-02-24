@@ -1,0 +1,14 @@
+node_modules
+dist
+.git
+.gitignore
+.env
+.env.*
+README.md
+backend-documentation.md
+api-docs.md
+fe-documentation.md
+guide
+uploads
+resume
+data

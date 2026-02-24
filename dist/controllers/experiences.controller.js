@@ -5,25 +5,25 @@ exports.createOne = createOne;
 exports.updateOne = updateOne;
 exports.deleteOne = deleteOne;
 const experiences_repository_1 = require("../db/experiences.repository");
-function getAll(_req, res, next) {
+async function getAll(_req, res, next) {
     try {
-        const experiences = (0, experiences_repository_1.getAllExperiences)();
+        const experiences = await (0, experiences_repository_1.getAllExperiences)();
         res.status(200).json(experiences);
     }
     catch {
         res.status(200).json([]);
     }
 }
-function createOne(req, res, next) {
+async function createOne(req, res, next) {
     const body = req.body;
     const id = Date.now().toString();
     let side = body.side;
     if (side !== "left" && side !== "right") {
-        const count = (0, experiences_repository_1.countExperiences)();
+        const count = await (0, experiences_repository_1.countExperiences)();
         side = count % 2 === 0 ? "right" : "left";
     }
     try {
-        const row = (0, experiences_repository_1.insertExperience)({
+        const row = await (0, experiences_repository_1.insertExperience)({
             id,
             title: body.title ?? "",
             company: body.company ?? "",
@@ -40,7 +40,7 @@ function createOne(req, res, next) {
         next(err);
     }
 }
-function updateOne(req, res, next) {
+async function updateOne(req, res, next) {
     const body = req.body;
     const { id, title, company, period, description, side } = body;
     if (!id) {
@@ -49,7 +49,7 @@ function updateOne(req, res, next) {
         err.expose = true;
         return next(err);
     }
-    const existing = (0, experiences_repository_1.findExperienceById)(id);
+    const existing = await (0, experiences_repository_1.findExperienceById)(id);
     if (!existing) {
         const err = new Error("Experience not found");
         err.statusCode = 404;
@@ -57,7 +57,7 @@ function updateOne(req, res, next) {
         return next(err);
     }
     try {
-        const row = (0, experiences_repository_1.updateExperience)({
+        const row = await (0, experiences_repository_1.updateExperience)({
             id,
             title: title ?? "",
             company: company ?? "",
@@ -74,7 +74,7 @@ function updateOne(req, res, next) {
         next(err);
     }
 }
-function deleteOne(req, res, next) {
+async function deleteOne(req, res, next) {
     const id = req.query.id;
     if (!id) {
         const err = new Error("ID is required");
@@ -82,7 +82,7 @@ function deleteOne(req, res, next) {
         err.expose = true;
         return next(err);
     }
-    const existing = (0, experiences_repository_1.findExperienceById)(id);
+    const existing = await (0, experiences_repository_1.findExperienceById)(id);
     if (!existing) {
         const err = new Error("Experience not found");
         err.statusCode = 404;
@@ -90,7 +90,7 @@ function deleteOne(req, res, next) {
         return next(err);
     }
     try {
-        (0, experiences_repository_1.deleteExperience)(id);
+        await (0, experiences_repository_1.deleteExperience)(id);
         res.status(200).json({ success: true });
     }
     catch {

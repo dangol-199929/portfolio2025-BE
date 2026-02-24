@@ -1,0 +1,1 @@
+{"version":3,"file":"objectStorage.d.ts","sourceRoot":"","sources":["../../src/lib/objectStorage.ts"],"names":[],"mappings":"AAcA,wBAAgB,cAAc,IAAI,OAAO,CAExC;AAaD,wBAAsB,YAAY,CAAC,MAAM,EAAE;IACzC,GAAG,EAAE,MAAM,CAAC;IACZ,IAAI,EAAE,MAAM,CAAC;IACb,WAAW,EAAE,MAAM,CAAC;CACrB,GAAG,OAAO,CAAC,IAAI,CAAC,CAehB;AAED,wBAAsB,SAAS,CAAC,GAAG,EAAE,MAAM,GAAG,OAAO,CAAC,GAAG,GAAG,IAAI,CAAC,CAchE"}

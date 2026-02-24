@@ -1,14 +1,20 @@
 import { Request, Response, NextFunction } from "express";
-import * as path from "path";
 import * as fs from "fs";
+import * as path from "path";
+import { isS3Configured, uploadObject } from "../lib/objectStorage";
 
 const ALLOWED_MIMES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 
-export function postUpload(
+function buildImageName(originalName: string): string {
+  const ext = path.extname(originalName) || ".png";
+  return `project-${Date.now()}${ext.toLowerCase()}`;
+}
+
+export async function postUpload(
   req: Request,
   res: Response,
   next: NextFunction,
-): void {
+): Promise<void> {
   const file = req.file;
   if (!file) {
     const err = new Error("No file uploaded") as Error & {
@@ -19,14 +25,8 @@ export function postUpload(
     err.expose = true;
     return next(err);
   }
+
   if (!ALLOWED_MIMES.includes(file.mimetype)) {
-    if (fs.existsSync(file.path)) {
-      try {
-        fs.unlinkSync(file.path);
-      } catch {
-        /* ignore */
-      }
-    }
     const err = new Error("Only image files are allowed") as Error & {
       statusCode?: number;
       expose?: boolean;
@@ -35,6 +35,32 @@ export function postUpload(
     err.expose = true;
     return next(err);
   }
-  const filePath = `/uploads/${path.basename(file.path)}`;
-  res.status(200).json({ path: filePath, success: true });
+
+  const fileName = buildImageName(file.originalname);
+
+  try {
+    if (isS3Configured()) {
+      await uploadObject({
+        key: `uploads/${fileName}`,
+        body: file.buffer,
+        contentType: file.mimetype,
+      });
+    } else {
+      const uploadsDir = path.join(process.cwd(), "uploads");
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+      }
+      fs.writeFileSync(path.join(uploadsDir, fileName), file.buffer);
+    }
+
+    res.status(200).json({ path: `/uploads/${fileName}`, success: true });
+  } catch {
+    const err = new Error("Failed to upload image") as Error & {
+      statusCode?: number;
+      expose?: boolean;
+    };
+    err.statusCode = 500;
+    err.expose = true;
+    next(err);
+  }
 }

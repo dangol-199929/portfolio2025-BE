@@ -38,11 +38,21 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ensureDbDir = ensureDbDir;
 exports.initSchema = initSchema;
+exports.getSqliteDb = getSqliteDb;
 const better_sqlite3_1 = __importDefault(require("better-sqlite3"));
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
+const prisma_1 = require("../lib/prisma");
 const dbPath = process.env.DATABASE_PATH || path.join(process.cwd(), "data", "portfolio.db");
-const schemaPath = path.join(__dirname, "schema.sql");
+const isProduction = process.env.NODE_ENV === "production";
+let sqliteDb = null;
+function resolveSchemaPath() {
+    const distPath = path.join(__dirname, "schema.sql");
+    if (fs.existsSync(distPath))
+        return distPath;
+    return path.join(process.cwd(), "src", "db", "schema.sql");
+}
+const schemaPath = resolveSchemaPath();
 function ensureDbDir() {
     const dir = path.dirname(dbPath);
     if (!fs.existsSync(dir)) {
@@ -53,8 +63,18 @@ function initSchema(dbInstance) {
     const schema = fs.readFileSync(schemaPath, "utf-8");
     dbInstance.exec(schema);
 }
-ensureDbDir();
-const db = new better_sqlite3_1.default(dbPath);
-initSchema(db);
-exports.default = db;
+function getSqliteDb() {
+    if (isProduction) {
+        throw new Error("SQLite is disabled in production. Use PostgreSQL via DATABASE_URL.");
+    }
+    if ((0, prisma_1.usePrisma)()) {
+        throw new Error("SQLite is disabled when Prisma/PostgreSQL is configured. Remove DATABASE_URL or DB_* for local SQLite development.");
+    }
+    if (!sqliteDb) {
+        ensureDbDir();
+        sqliteDb = new better_sqlite3_1.default(dbPath);
+        initSchema(sqliteDb);
+    }
+    return sqliteDb;
+}
 //# sourceMappingURL=index.js.map

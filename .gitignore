@@ -1,0 +1,7 @@
+node_modules
+.env
+api-docs.md
+scripts
+.backend-documentation.md
+fe-documentation.md
+guide

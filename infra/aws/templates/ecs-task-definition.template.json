@@ -1,0 +1,59 @@
+{
+  "family": "__ECS_TASK_FAMILY__",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::__AWS_ACCOUNT_ID__:role/__ECS_EXECUTION_ROLE_NAME__",
+  "taskRoleArn": "arn:aws:iam::__AWS_ACCOUNT_ID__:role/__ECS_TASK_ROLE_NAME__",
+  "containerDefinitions": [
+    {
+      "name": "__ECS_CONTAINER_NAME__",
+      "image": "__ECR_IMAGE_URI__",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": __ECS_CONTAINER_PORT__,
+          "hostPort": __ECS_CONTAINER_PORT__,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        {
+          "name": "NODE_ENV",
+          "value": "production"
+        },
+        {
+          "name": "PORT",
+          "value": "__ECS_CONTAINER_PORT__"
+        },
+        {
+          "name": "AWS_REGION",
+          "value": "__AWS_REGION__"
+        },
+        {
+          "name": "S3_BUCKET",
+          "value": "__S3_BUCKET__"
+        },
+        {
+          "name": "CORS_ORIGIN_ALLOWLIST",
+          "value": "__CORS_ORIGIN_ALLOWLIST__"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "DATABASE_URL",
+          "valueFrom": "__DATABASE_URL_SECRET_ARN__"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "__CLOUDWATCH_LOG_GROUP__",
+          "awslogs-region": "__AWS_REGION__",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ]
+}

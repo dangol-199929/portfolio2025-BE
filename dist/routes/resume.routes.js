@@ -39,18 +39,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.resumeRouter = void 0;
 const express_1 = require("express");
 const multer_1 = __importDefault(require("multer"));
-const path = __importStar(require("path"));
-const fs = __importStar(require("fs"));
 const ctrl = __importStar(require("../controllers/resume.controller"));
-const resumeDir = path.join(process.cwd(), "resume");
-if (!fs.existsSync(resumeDir)) {
-    fs.mkdirSync(resumeDir, { recursive: true });
-}
-const storage = multer_1.default.diskStorage({
-    destination: (_req, _file, cb) => cb(null, resumeDir),
-    filename: (_req, _file, cb) => cb(null, `resume-${Date.now()}.pdf`),
+const upload = (0, multer_1.default)({
+    storage: multer_1.default.memoryStorage(),
+    limits: { fileSize: 15 * 1024 * 1024 },
 });
-const upload = (0, multer_1.default)({ storage });
 exports.resumeRouter = (0, express_1.Router)();
 exports.resumeRouter.get("/resume", ctrl.getResume);
 exports.resumeRouter.post("/resume", upload.single("file"), ctrl.postResume);

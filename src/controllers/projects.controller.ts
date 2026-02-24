@@ -32,38 +32,28 @@ function applyDefaults(body: Partial<Project>): Omit<Project, "id"> {
   };
 }
 
-function rowToProject(row: Record<string, unknown>): Project {
-  return {
-    id: row.id as string,
-    title: row.title as string,
-    description: row.description as string,
-    fullDescription: row.fullDescription as string,
-    image: row.image as string,
-    tags: JSON.parse((row.tags as string) || "[]") as string[],
-    liveUrl: row.liveUrl as string,
-    githubUrl: row.githubUrl as string,
-    metrics: JSON.parse((row.metrics as string) || "[]") as string[],
-  };
-}
-
-export function getAll(_req: Request, res: Response, next: NextFunction): void {
+export async function getAll(
+  _req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
   try {
-    const projects = getAllProjects();
+    const projects = await getAllProjects();
     res.status(200).json(projects);
   } catch {
     res.status(200).json([]);
   }
 }
 
-export function createOne(
+export async function createOne(
   req: Request,
   res: Response,
   next: NextFunction,
-): void {
+): Promise<void> {
   const body = applyDefaults(req.body as Partial<Project>);
   const id = Date.now().toString();
   try {
-    const row = insertProject({
+    const row = await insertProject({
       id,
       title: body.title,
       description: body.description,
@@ -86,11 +76,11 @@ export function createOne(
   }
 }
 
-export function updateOne(
+export async function updateOne(
   req: Request,
   res: Response,
   next: NextFunction,
-): void {
+): Promise<void> {
   const body = req.body as Project;
   const { id } = body;
   if (!id) {
@@ -102,7 +92,7 @@ export function updateOne(
     err.expose = true;
     return next(err);
   }
-  const existing = findProjectById(id);
+  const existing = await findProjectById(id);
   if (!existing) {
     const err = new Error("Project not found") as Error & {
       statusCode?: number;
@@ -112,20 +102,19 @@ export function updateOne(
     err.expose = true;
     return next(err);
   }
-  const current = existing;
   const merged: Project = {
     id,
-    title: body.title ?? current.title,
-    description: body.description ?? current.description,
-    fullDescription: body.fullDescription ?? current.fullDescription,
-    image: body.image ?? current.image,
-    tags: Array.isArray(body.tags) ? body.tags : current.tags,
-    liveUrl: body.liveUrl ?? current.liveUrl,
-    githubUrl: body.githubUrl ?? current.githubUrl,
-    metrics: Array.isArray(body.metrics) ? body.metrics : current.metrics,
+    title: body.title ?? existing.title,
+    description: body.description ?? existing.description,
+    fullDescription: body.fullDescription ?? existing.fullDescription,
+    image: body.image ?? existing.image,
+    tags: Array.isArray(body.tags) ? body.tags : existing.tags,
+    liveUrl: body.liveUrl ?? existing.liveUrl,
+    githubUrl: body.githubUrl ?? existing.githubUrl,
+    metrics: Array.isArray(body.metrics) ? body.metrics : existing.metrics,
   };
   try {
-    const updated = updateProject(merged);
+    const updated = await updateProject(merged);
     res.status(200).json(updated);
   } catch {
     const err = new Error("Failed to update project") as Error & {
@@ -138,11 +127,11 @@ export function updateOne(
   }
 }
 
-export function deleteOne(
+export async function deleteOne(
   req: Request,
   res: Response,
   next: NextFunction,
-): void {
+): Promise<void> {
   const id = req.query.id as string | undefined;
   if (!id) {
     const err = new Error("ID is required") as Error & {
@@ -153,7 +142,7 @@ export function deleteOne(
     err.expose = true;
     return next(err);
   }
-  const existing = findProjectById(id);
+  const existing = await findProjectById(id);
   if (!existing) {
     const err = new Error("Project not found") as Error & {
       statusCode?: number;
@@ -164,7 +153,7 @@ export function deleteOne(
     return next(err);
   }
   try {
-    deleteProject(id);
+    await deleteProject(id);
     res.status(200).json({ success: true });
   } catch {
     const err = new Error("Failed to delete project") as Error & {

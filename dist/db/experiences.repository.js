@@ -1,7 +1,4 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getAllExperiences = getAllExperiences;
 exports.countExperiences = countExperiences;
@@ -9,23 +6,41 @@ exports.insertExperience = insertExperience;
 exports.findExperienceById = findExperienceById;
 exports.updateExperience = updateExperience;
 exports.deleteExperience = deleteExperience;
-const index_1 = __importDefault(require("./index"));
+const prisma_1 = require("../lib/prisma");
 const logger_1 = require("../utils/logger");
-function getAllExperiences() {
+const index_1 = require("./index");
+function sqlite() {
+    return (0, index_1.getSqliteDb)();
+}
+async function getAllExperiences() {
     try {
-        const rows = index_1.default
+        if ((0, prisma_1.usePrisma)()) {
+            const prisma = (0, prisma_1.getPrisma)();
+            const rows = await prisma.experience.findMany({ orderBy: { id: "asc" } });
+            return rows.map((r) => ({
+                id: r.id,
+                title: r.title,
+                company: r.company,
+                period: r.period,
+                description: r.description,
+                side: r.side,
+            }));
+        }
+        return sqlite()
             .prepare("SELECT * FROM experiences ORDER BY id")
             .all();
-        return rows;
     }
     catch (error) {
         logger_1.logger.error("Failed to fetch experiences", error);
         throw error;
     }
 }
-function countExperiences() {
+async function countExperiences() {
     try {
-        const row = index_1.default.prepare("SELECT COUNT(*) as c FROM experiences").get();
+        if ((0, prisma_1.usePrisma)()) {
+            return await (0, prisma_1.getPrisma)().experience.count();
+        }
+        const row = sqlite().prepare("SELECT COUNT(*) as c FROM experiences").get();
         return row.c;
     }
     catch (error) {
@@ -33,47 +48,101 @@ function countExperiences() {
         throw error;
     }
 }
-function insertExperience(experience) {
-    const stmt = index_1.default.prepare("INSERT INTO experiences (id, title, company, period, description, side) VALUES (?, ?, ?, ?, ?, ?)");
+async function insertExperience(experience) {
     try {
+        if ((0, prisma_1.usePrisma)()) {
+            const created = await (0, prisma_1.getPrisma)().experience.create({
+                data: {
+                    id: experience.id,
+                    title: experience.title,
+                    company: experience.company,
+                    period: experience.period,
+                    description: experience.description,
+                    side: experience.side,
+                },
+            });
+            return {
+                id: created.id,
+                title: created.title,
+                company: created.company,
+                period: created.period,
+                description: created.description,
+                side: created.side,
+            };
+        }
+        const stmt = sqlite().prepare("INSERT INTO experiences (id, title, company, period, description, side) VALUES (?, ?, ?, ?, ?, ?)");
         stmt.run(experience.id, experience.title, experience.company, experience.period, experience.description, experience.side);
-        const row = index_1.default
+        return sqlite()
             .prepare("SELECT * FROM experiences WHERE id = ?")
             .get(experience.id);
-        return row;
     }
     catch (error) {
         logger_1.logger.error("Failed to insert experience", error);
         throw error;
     }
 }
-function findExperienceById(id) {
+async function findExperienceById(id) {
     try {
-        const row = index_1.default.prepare("SELECT * FROM experiences WHERE id = ?").get(id);
-        return row;
+        if ((0, prisma_1.usePrisma)()) {
+            const r = await (0, prisma_1.getPrisma)().experience.findUnique({ where: { id } });
+            if (!r)
+                return undefined;
+            return {
+                id: r.id,
+                title: r.title,
+                company: r.company,
+                period: r.period,
+                description: r.description,
+                side: r.side,
+            };
+        }
+        return sqlite().prepare("SELECT * FROM experiences WHERE id = ?").get(id);
     }
     catch (error) {
         logger_1.logger.error("Failed to find experience by id", { id, error });
         throw error;
     }
 }
-function updateExperience(experience) {
-    const stmt = index_1.default.prepare("UPDATE experiences SET title = ?, company = ?, period = ?, description = ?, side = ? WHERE id = ?");
+async function updateExperience(experience) {
     try {
+        if ((0, prisma_1.usePrisma)()) {
+            const updated = await (0, prisma_1.getPrisma)().experience.update({
+                where: { id: experience.id },
+                data: {
+                    title: experience.title,
+                    company: experience.company,
+                    period: experience.period,
+                    description: experience.description,
+                    side: experience.side,
+                },
+            });
+            return {
+                id: updated.id,
+                title: updated.title,
+                company: updated.company,
+                period: updated.period,
+                description: updated.description,
+                side: updated.side,
+            };
+        }
+        const stmt = sqlite().prepare("UPDATE experiences SET title = ?, company = ?, period = ?, description = ?, side = ? WHERE id = ?");
         stmt.run(experience.title, experience.company, experience.period, experience.description, experience.side, experience.id);
-        const row = index_1.default
+        return sqlite()
             .prepare("SELECT * FROM experiences WHERE id = ?")
             .get(experience.id);
-        return row;
     }
     catch (error) {
         logger_1.logger.error("Failed to update experience", { id: experience.id, error });
         throw error;
     }
 }
-function deleteExperience(id) {
+async function deleteExperience(id) {
     try {
-        index_1.default.prepare("DELETE FROM experiences WHERE id = ?").run(id);
+        if ((0, prisma_1.usePrisma)()) {
+            await (0, prisma_1.getPrisma)().experience.delete({ where: { id } });
+            return;
+        }
+        sqlite().prepare("DELETE FROM experiences WHERE id = ?").run(id);
     }
     catch (error) {
         logger_1.logger.error("Failed to delete experience", { id, error });

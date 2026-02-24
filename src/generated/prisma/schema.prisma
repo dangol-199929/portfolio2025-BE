@@ -1,0 +1,43 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Experience {
+  id          String
+  title       String
+  company     String
+  period      String
+  description String
+  side        String // 'left' | 'right'
+
+  @@id([id])
+  @@map("experiences")
+}
+
+model Project {
+  id              String
+  title           String
+  description     String
+  fullDescription String
+  image           String
+  tags            String // JSON array
+  liveUrl         String
+  githubUrl       String
+  metrics         String // JSON array
+
+  @@id([id])
+  @@map("projects")
+}
+
+model Settings {
+  id         Int    @id @default(1)
+  resumePath String @default("/resume/Resume.pdf")
+
+  @@map("settings")
+}
