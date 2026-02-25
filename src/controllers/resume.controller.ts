@@ -1,7 +1,11 @@
 import { Request, Response, NextFunction } from "express";
 import * as fs from "fs";
 import * as path from "path";
-import { isS3Configured, uploadObject } from "../lib/objectStorage";
+import {
+  getPublicPath,
+  isS3Configured,
+  uploadObject,
+} from "../lib/objectStorage";
 import { getResumePath, setResumePath } from "../db/settings.repository";
 import { logger } from "../utils/logger";
 
@@ -69,7 +73,10 @@ export async function postResume(
     }
 
     await setResumePath(resumePath);
-    res.status(200).json({ resumePath, success: true });
+    const pathForClient = isS3Configured()
+      ? getPublicPath(`resume/${fileName}`)
+      : resumePath;
+    res.status(200).json({ resumePath: pathForClient, success: true });
   } catch (e) {
     const cause = e instanceof Error ? e : new Error(String(e));
     logger.error("Resume upload failed", {

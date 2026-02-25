@@ -39,6 +39,7 @@ const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
 const objectStorage_1 = require("../lib/objectStorage");
 const settings_repository_1 = require("../db/settings.repository");
+const logger_1 = require("../utils/logger");
 const ALLOWED_MIME = "application/pdf";
 function buildResumeFileName() {
     return `resume-${Date.now()}.pdf`;
@@ -84,10 +85,20 @@ async function postResume(req, res, next) {
             fs.writeFileSync(path.join(resumeDir, fileName), file.buffer);
         }
         await (0, settings_repository_1.setResumePath)(resumePath);
-        res.status(200).json({ resumePath, success: true });
+        const pathForClient = (0, objectStorage_1.isS3Configured)()
+            ? (0, objectStorage_1.getPublicPath)(`resume/${fileName}`)
+            : resumePath;
+        res.status(200).json({ resumePath: pathForClient, success: true });
     }
-    catch {
-        const err = new Error("Failed to upload resume");
+    catch (e) {
+        const cause = e instanceof Error ? e : new Error(String(e));
+        logger_1.logger.error("Resume upload failed", {
+            message: cause.message,
+            stack: cause.stack,
+        });
+        const err = new Error(process.env.NODE_ENV === "production"
+            ? "Failed to upload resume"
+            : `Failed to upload resume: ${cause.message}`);
         err.statusCode = 500;
         err.expose = true;
         next(err);

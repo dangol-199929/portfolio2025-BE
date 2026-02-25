@@ -41,3 +41,22 @@ model Settings {
 
   @@map("settings")
 }
+
+model About {
+  id           Int    @id @default(1)
+  name         String @default("")
+  email        String @default("")
+  education    String @default("")
+  availability String @default("")
+  bio          String @default("[]") // JSON array of paragraph strings
+  image        String @default("")
+
+  @@map("about")
+}
+
+model Contact {
+  id    Int    @id @default(1)
+  items String @default("[]") // JSON array of { label, value, href, target?, download? }
+
+  @@map("contact")
+}

@@ -1,0 +1,103 @@
+[
+  {
+    "id": "1",
+    "title": "AI Assistant Platform",
+    "description": "AI-powered enterprise productivity tool automating day-to-day business workflows.",
+    "fullDescription": "Designed and developed an AI assistant platform to handle HR tasks, client communications, and internal reporting. Features include automated job creation and candidate shortlisting, meeting minute generation, quotation planning, email drafting, and performance review reporting. Implemented modular AI agents for usability, accuracy, and efficiency, resulting in a 60% reduction in manual effort and faster turnaround across workflows.",
+    "image": "assistant",
+    "tags": [
+      "AI",
+      "Automation",
+      "Enterprise",
+      "React",
+      "Next.js",
+      "TypeScript",
+      "Workflow Optimization"
+    ],
+    "liveUrl": "#",
+    "githubUrl": "#",
+    "metrics": [
+      "60% reduction in manual administrative effort",
+      "Faster HR and client workflows",
+      "Automated reporting and email tasks"
+    ]
+  },
+  {
+    "id": "2",
+    "title": "Revv Travels",
+    "description": "Tour Booking & Bike Rental platform for a Spain-based travel company.",
+    "fullDescription": "Built an interactive booking platform using Next.js and TypeScript. Delivered responsive design, SEO optimization, and improved booking reliability. Features include booking management, mobile-first interfaces, and performance tuning for faster user flow.",
+    "image": "revv",
+    "tags": [
+      "Next.js",
+      "TypeScript",
+      "SEO",
+      "Responsive Design",
+      "Booking System"
+    ],
+    "liveUrl": "#",
+    "githubUrl": "#",
+    "metrics": [
+      "Improved booking workflow reliability by 30%",
+      "Enhanced SEO and visibility",
+      "Optimized mobile-first UX"
+    ]
+  },
+  {
+    "id": "3",
+    "title": "Silcre Tech",
+    "description": "AI-powered medical kit scanning & reporting system for Japan-based healthcare.",
+    "fullDescription": "Built a hospital testing system for scanning medical kits and generating AI-driven reports. Integrated camera functionality with react-webcam, managed state using Zustand, and displayed accurate AI-generated results for healthcare workflows.",
+    "image": "ban",
+    "tags": [
+      "React",
+      "Zustand",
+      "AI Integration",
+      "react-webcam",
+      "Healthcare"
+    ],
+    "liveUrl": "#",
+    "githubUrl": "#",
+    "metrics": [
+      "AI-driven medical reports",
+      "Accurate kit scanning",
+      "Streamlined healthcare workflow"
+    ]
+  },
+  {
+    "id": "4",
+    "title": "BaseStation CRM",
+    "description": "CRM platform for US-based enterprise clients.",
+    "fullDescription": "Developed frontend components using Next.js and SCSS for high-volume CRM datasets. Improved UI performance, optimized API data handling, and created intuitive interfaces to streamline customer management and business processes.",
+    "image": "bs",
+    "tags": ["Next.js", "SCSS", "REST API", "CRM", "Performance Optimization"],
+    "liveUrl": "#",
+    "githubUrl": "#",
+    "metrics": [
+      "Enhanced UI performance by 25%",
+      "Streamlined API integration",
+      "Improved enterprise user experience"
+    ]
+  },
+  {
+    "id": "5",
+    "title": "Koklass E-Commerce",
+    "description": "Multiple e-commerce platforms including KFC Nepal, Pizza World, and Indu Grocery.",
+    "fullDescription": "Contributed to the development of e-commerce platforms with responsive UI, backend API integration, and optimized user experience. Platforms included KFC Nepal Kiosk, Pizza World, and Indu Grocery, supporting transaction-critical flows in the Nepal market.",
+    "image": "koklass",
+    "tags": [
+      "React",
+      "E-Commerce",
+      "API Integration",
+      "Responsive UI",
+      "UX Optimization"
+    ],
+    "liveUrl": "#",
+    "githubUrl": "#",
+    "metrics": [
+      "Supported 3+ platforms",
+      "Optimized UX for Nepal market",
+      "Integrated key backend workflows"
+    ]
+  }
+]

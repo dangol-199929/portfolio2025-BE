@@ -6,11 +6,12 @@
 
 ## 1. Purpose & Scope
 
-This backend provides a standalone API for the Portfolio 2025 frontend. It replaces the original Next.js file‑based APIs with a dedicated Node.js/Express service and SQLite persistence.
+This backend provides a standalone API for the Portfolio 2025 frontend. It replaces the original Next.js file-based APIs with a dedicated Node.js/Express service and supports both Prisma/PostgreSQL and local SQLite fallback.
 
 **Core responsibilities:**
 
 - Manage **experiences** and **projects** (CRUD).
+- Manage **about** and **contact** profile settings (GET/PUT).
 - Provide **resume** upload and retrieval.
 - Provide **image upload** for project thumbnails.
 - Maintain full compatibility with the API contract defined in `api-docs.md`.
@@ -27,7 +28,7 @@ This document focuses on:
 
 - **Runtime:** Node.js, Express.
 - **Language:** TypeScript, compiled to CommonJS targeting ES2020.
-- **Database:** SQLite via `better-sqlite3`.
+- **Database:** Prisma + PostgreSQL (primary, especially production) with SQLite fallback for local development.
 - **Validation:** `zod` for POST/PUT body validation.
 - **Uploads:** `multer` for multipart/form-data handling.
 - **Configuration:** `.env` via `dotenv`.
@@ -50,24 +51,31 @@ Root layout (key elements only):
     - `schema.sql` – SQLite schema + initial seed.
     - `index.ts` – DB initialization and export.
   - `routes/`
+    - `about.routes.ts`
+    - `contact.routes.ts`
     - `experiences.routes.ts`
     - `projects.routes.ts`
     - `resume.routes.ts`
     - `upload.routes.ts`
   - `controllers/`
+    - `about.controller.ts`
+    - `contact.controller.ts`
     - `experiences.controller.ts`
     - `projects.controller.ts`
     - `resume.controller.ts`
     - `upload.controller.ts`
+  - `lib/`
+    - `prisma.ts` – Prisma client bootstrap and DB mode selection.
+    - `objectStorage.ts` – S3 upload/read helpers.
   - `middleware/`
     - `validate.ts` – Zod body validation.
     - `errorHandler.ts` – Standardized error responses.
   - `utils/`
     - `index.ts` – Placeholder for shared helpers.
 - `dist/` – Compiled JavaScript (build output).
-- `data/portfolio.db` – SQLite database file (runtime).
-- `resume/` – Uploaded resume PDFs (served via `/resume/...`).
-- `uploads/` – Uploaded images (served via `/uploads/...`).
+- `prisma/` – Prisma schema and SQL migrations.
+- `data/portfolio.db` – SQLite database file (local fallback mode).
+- `resume/` / `uploads/` – Local fallback file storage when S3 is not configured.
 
 ---
 
@@ -82,9 +90,16 @@ Loaded automatically by `dotenv` in `src/server.ts`.
 - `PORT`
   - Port the HTTP server listens on.
   - Default: `3000`.
+- `DATABASE_URL`
+  - PostgreSQL connection string for Prisma.
+  - Required in production.
 - `DATABASE_PATH`
-  - Filesystem path for the SQLite database.
+  - Filesystem path for local SQLite fallback (when `DATABASE_URL` is not set and not in production).
   - Default: `./data/portfolio.db`.
+- `S3_BUCKET`, `AWS_REGION`
+  - Enables S3-backed storage for uploads/resume.
+- `ASSETS_BASE_URL`
+  - Optional public base URL used in upload responses (for full absolute asset URLs).
 
 Example (`.env.example`):
 
@@ -129,13 +144,14 @@ Configures the Express application:
 
 - **Middleware:**
   - `express.json()` – JSON body parsing.
-  - `cors()` – Enables CORS (currently unrestricted).
-- **Static file serving:**
-  - `/resume` → `<project-root>/resume` (resume PDFs).
-  - `/uploads` → `<project-root>/uploads` (uploaded images).
+  - `cors()` – Allowlist-based CORS with production guardrails.
+- **File routes:**
+  - `GET /resume/:fileName` and `GET /uploads/:fileName` stream files from S3 (when configured) or local disk.
 - **Health check:**
   - `GET /health` → `{ "status": "ok" }`.
 - **Routers (mounted under `/api`):**
+  - `/api/about` – About settings GET/PUT.
+  - `/api/contact` – Contact settings GET/PUT.
   - `/api/experiences` – Experiences CRUD.
   - `/api/projects` – Projects CRUD.
   - `/api/resume` – Resume upload + get current path.
@@ -147,7 +163,10 @@ Configures the Express application:
 
 ## 6. Database Model
 
-Database is a single SQLite file, opened via `better-sqlite3`.
+Database access is dual-mode:
+
+- **Prisma + PostgreSQL** when `DATABASE_URL` (or `DB_*`) is configured, and always in production.
+- **SQLite fallback** in local development when no Prisma connection string is configured.
 
 ### 6.1 Initialization (`src/db/index.ts`)
 
@@ -157,7 +176,19 @@ Database is a single SQLite file, opened via `better-sqlite3`.
 - Opens DB as a long‑lived, process‑wide instance.
 - Runs `schema.sql` to ensure all tables exist and seed `settings`.
 
-### 6.2 Schema (`src/db/schema.sql`)
+### 6.2 Schema (Prisma + SQLite fallback)
+
+**Prisma models (`prisma/schema.prisma`)**
+
+- `Experience`
+- `Project`
+- `Settings`
+- `About`
+- `Contact`
+
+Prisma migrations are stored under `prisma/migrations`.
+
+**SQLite fallback schema (`src/db/schema.sql`)**
 
 **Table `experiences`**
 
@@ -184,6 +215,21 @@ Database is a single SQLite file, opened via `better-sqlite3`.
 
 - `id` INTEGER PRIMARY KEY CHECK (`id` = 1)
 - `resumePath` TEXT NOT NULL DEFAULT `/resume/Resume.pdf`
+
+**Table `about`**
+
+- `id` INTEGER PRIMARY KEY CHECK (`id` = 1)
+- `name` TEXT NOT NULL DEFAULT `''`
+- `email` TEXT NOT NULL DEFAULT `''`
+- `education` TEXT NOT NULL DEFAULT `''`
+- `availability` TEXT NOT NULL DEFAULT `''`
+- `bio` TEXT NOT NULL DEFAULT `'[]'` (JSON string array)
+- `image` TEXT NOT NULL DEFAULT `''`
+
+**Table `contact`**
+
+- `id` INTEGER PRIMARY KEY CHECK (`id` = 1)
+- `items` TEXT NOT NULL DEFAULT `'[]'` (JSON string array)
 
 Seed:
 
@@ -298,19 +344,16 @@ The API contract (paths, methods, bodies, responses) is defined in `api-docs.md`
   - Fallback on error/missing row: `{ "resumePath": "/resume/Resume.pdf" }` with `200`.
 
 - `POST /api/resume`
-  - `multer` with disk storage:
-    - Destination: `<project-root>/resume`.
-    - Filename: `resume-<timestamp>.pdf`.
+  - `multer` memory storage.
   - Validates:
     - File exists.
     - `mimetype === "application/pdf"`.
-  - On invalid/missing file:
-    - Cleans up file if needed.
-    - Returns `400` with `"No file uploaded"` or `"Only PDF files are allowed"`.
+  - Returns `400` with `"No file uploaded"` or `"Only PDF files are allowed"` for invalid input.
   - On success:
-    - Computes `resumePath = "/resume/<filename>"`.
+    - Uploads to S3 key `resume/<filename>` when S3 is configured; otherwise writes to local `resume/`.
+    - Computes `resumePath = "/resume/<filename>"` for persistence.
     - Updates `settings.resumePath`.
-    - Returns `{ resumePath, success: true }` with `200`.
+    - Returns `{ resumePath, success: true }` with `200` (can be absolute URL when S3 + `ASSETS_BASE_URL` are configured).
   - On error:
     - `500 { "error": "Failed to upload resume" }`.
 
@@ -318,27 +361,47 @@ The API contract (paths, methods, bodies, responses) is defined in `api-docs.md`
 
 - **Router:** `src/routes/upload.routes.ts`
 - **Controller:** `src/controllers/upload.controller.ts`
-- **Storage:** `<project-root>/uploads`, served at `/uploads/*`.
+- **Storage:** S3-backed when configured, otherwise local `uploads/`.
 
 **Handlers:**
 
 - `POST /api/upload`
-  - `multer` with disk storage:
-    - Destination: `<project-root>/uploads`.
-    - Filename: `project-<timestamp>.<ext>`.
+  - `multer` memory storage.
+  - Filename: `project-<timestamp>.<ext>`.
   - Validates:
     - File exists.
     - `mimetype` is one of:
       - `image/jpeg`, `image/png`, `image/webp`, `image/gif`.
-  - On invalid/missing file:
-    - Cleans up temp file.
-    - Returns:
-      - `400 { "error": "No file uploaded" }`, or
-      - `400 { "error": "Only image files are allowed" }`.
+  - Returns:
+    - `400 { "error": "No file uploaded" }`, or
+    - `400 { "error": "Only image files are allowed" }` for invalid input.
   - On success:
-    - Returns `{ path: "/uploads/<filename>", success: true }` with `200`.
+    - Uploads to S3 key `uploads/<filename>` when S3 is configured; otherwise writes local file.
+    - Returns `{ path: "...", success: true }` where `path` can be relative (`/uploads/...`) or absolute URL (when S3 + `ASSETS_BASE_URL` are configured).
   - On error:
-    - `500 { "error": "Failed to upload file" }`.
+    - `500 { "error": "Failed to upload image" }`.
+
+### 7.5 About – `/api/about`
+
+- **Router:** `src/routes/about.routes.ts`
+- **Controller:** `src/controllers/about.controller.ts`
+- **Storage shape:** single-row settings (`id = 1`) with fields `name`, `email`, `education`, `availability`, `bio[]`, `image`.
+
+Handlers:
+
+- `GET /api/about` → returns current about object.
+- `PUT /api/about` → partial update; returns merged object.
+
+### 7.6 Contact – `/api/contact`
+
+- **Router:** `src/routes/contact.routes.ts`
+- **Controller:** `src/controllers/contact.controller.ts`
+- **Storage shape:** single-row settings (`id = 1`) with `items` JSON array.
+
+Handlers:
+
+- `GET /api/contact` → returns contact item array.
+- `PUT /api/contact` → replaces item array; returns updated array.
 
 ---
 
@@ -409,9 +472,9 @@ The compiled entrypoint is `dist/server.js`.
 
 ---
 
-## 10. Deployment & Extension Guidelines (AWS, Docker, HTTPS, Prisma, CI/CD)
+## 10. Deployment Guidelines (AWS, Docker, HTTPS, CI/CD)
 
-This section outlines how to extend and harden this backend for production, especially on AWS with Docker, HTTPS, Prisma, and GitHub Actions. These steps are **not implemented yet**, but the codebase is structured to support them.
+This section outlines deployment and hardening practices for the current implementation on AWS with Docker, HTTPS, Prisma migrations, and CI/CD.
 
 ### 10.1 Dockerization
 
@@ -469,24 +532,17 @@ If terminating HTTPS directly in Node (less common for AWS production):
 
 In all cases, the frontend should use `https://...` for `NEXT_PUBLIC_API_URL`.
 
-### 10.4 Moving to Prisma (optional)
+### 10.4 Prisma migration operations
 
-Current state:
+Use Prisma migrations for PostgreSQL environments:
 
-- Direct SQLite access using `better-sqlite3` and SQL queries in controllers.
+- `npm run db:migrate:deploy` in production/startup.
+- `npm run db:migrate:dev` for local Postgres development.
 
-Migration path:
+Notes:
 
-1. **Define Prisma schema** that mirrors `schema.sql`:
-   - Models: `Experience`, `Project`, `Settings`.
-   - Fields match columns; `tags` and `metrics` can remain JSON columns or be normalized.
-2. **Configure Prisma datasource**:
-   - SQLite (local) or a managed DB (RDS Postgres/MySQL).
-3. **Replace controller logic**:
-   - Swap raw SQL calls for Prisma client calls.
-   - Keep API shapes identical to `api-docs.md`.
-4. **Adjust deployment**:
-   - If moving off SQLite, `DATABASE_PATH` would be replaced with a connection URL (e.g. `DATABASE_URL`).
+- Prisma CLI requires `DATABASE_URL`.
+- Local SQLite fallback mode does not use Prisma migrations.
 
 ### 10.5 GitHub Actions CI/CD (outline)
 
@@ -534,11 +590,11 @@ Suggested pipeline steps:
 
 ## 11. Summary
 
-- The backend is a small, focused **Express + SQLite** service exposing strictly defined REST APIs for experiences, projects, resume, and image uploads.
+- The backend is a focused **Express + Prisma(PostgreSQL)** service with local SQLite fallback, exposing REST APIs for experiences, projects, about, contact, resume, and image uploads.
 - Configuration is environment‑driven and already structured for containerization and cloud deployment.
-- Extending to AWS (with Docker, TLS at a load balancer, and a managed DB via Prisma) primarily involves:
-  - Containerizing the service.
-  - Externalizing and securing configuration.
-  - Replacing raw SQLite access with Prisma if needed.
+- Production deployment on AWS primarily involves:
+  - Containerizing and deploying via ECS/ECR.
+  - Supplying `DATABASE_URL` securely (Secrets Manager).
+  - Enabling S3 asset storage and proper IAM permissions.
 
 This document should serve as the primary reference when integrating this backend into AWS and designing CI/CD, security, and infrastructure around it.

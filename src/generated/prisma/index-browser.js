@@ -147,6 +147,21 @@ exports.Prisma.SettingsScalarFieldEnum = {
   resumePath: 'resumePath'
 };
 
+exports.Prisma.AboutScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  email: 'email',
+  education: 'education',
+  availability: 'availability',
+  bio: 'bio',
+  image: 'image'
+};
+
+exports.Prisma.ContactScalarFieldEnum = {
+  id: 'id',
+  items: 'items'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -161,7 +176,9 @@ exports.Prisma.QueryMode = {
 exports.Prisma.ModelName = {
   Experience: 'Experience',
   Project: 'Project',
-  Settings: 'Settings'
+  Settings: 'Settings',
+  About: 'About',
+  Contact: 'Contact'
 };
 
 /**

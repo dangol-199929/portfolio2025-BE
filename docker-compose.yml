@@ -7,7 +7,8 @@ services:
       NODE_ENV: development
       PORT: 3000
       DATABASE_URL: postgresql://portfolio:portfolio@postgres:5432/portfolio?schema=public
-      CORS_ORIGIN_ALLOWLIST: http://localhost:3000
+      CORS_ORIGIN_ALLOWLIST: http://localhost:3000, https://dqr1j1isuojod.cloudfront.net, http://localhost:3100
+      CORS_ALLOW_ALL: 1
     ports:
       - "3000:3000"
     depends_on:

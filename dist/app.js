@@ -5,6 +5,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
+const about_routes_1 = require("./routes/about.routes");
+const contact_routes_1 = require("./routes/contact.routes");
 const experiences_routes_1 = require("./routes/experiences.routes");
 const projects_routes_1 = require("./routes/projects.routes");
 const resume_routes_1 = require("./routes/resume.routes");
@@ -45,6 +47,8 @@ app.get("/health", (_req, res) => {
 });
 app.get("/uploads/:fileName", files_controller_1.getUploadedFile);
 app.get("/resume/:fileName", files_controller_1.getResumeFile);
+app.use("/api", about_routes_1.aboutRouter);
+app.use("/api", contact_routes_1.contactRouter);
 app.use("/api", experiences_routes_1.experiencesRouter);
 app.use("/api", projects_routes_1.projectsRouter);
 app.use("/api", resume_routes_1.resumeRouter);

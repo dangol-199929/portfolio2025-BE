@@ -1,7 +1,11 @@
 import { Request, Response, NextFunction } from "express";
 import * as fs from "fs";
 import * as path from "path";
-import { isS3Configured, uploadObject } from "../lib/objectStorage";
+import {
+  getPublicPath,
+  isS3Configured,
+  uploadObject,
+} from "../lib/objectStorage";
 
 const ALLOWED_MIMES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 
@@ -38,6 +42,7 @@ export async function postUpload(
 
   const fileName = buildImageName(file.originalname);
 
+  const relativePath = `/uploads/${fileName}`;
   try {
     if (isS3Configured()) {
       await uploadObject({
@@ -53,7 +58,10 @@ export async function postUpload(
       fs.writeFileSync(path.join(uploadsDir, fileName), file.buffer);
     }
 
-    res.status(200).json({ path: `/uploads/${fileName}`, success: true });
+    const pathForClient = isS3Configured()
+      ? getPublicPath(`uploads/${fileName}`)
+      : relativePath;
+    res.status(200).json({ path: pathForClient, success: true });
   } catch {
     const err = new Error("Failed to upload image") as Error & {
       statusCode?: number;

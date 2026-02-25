@@ -1,4 +1,5 @@
 export declare function isS3Configured(): boolean;
+export declare function getPublicPath(key: string): string;
 export declare function uploadObject(params: {
     key: string;
     body: Buffer;

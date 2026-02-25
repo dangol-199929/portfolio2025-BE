@@ -1,6 +1,10 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 
-const { GetObjectCommand, PutObjectCommand, S3Client } = require("@aws-sdk/client-s3");
+const {
+  GetObjectCommand,
+  PutObjectCommand,
+  S3Client,
+} = require("@aws-sdk/client-s3");
 
 let s3Client: any = null;
 
@@ -14,6 +18,23 @@ function getRegion(): string {
 
 export function isS3Configured(): boolean {
   return getBucket().length > 0 && getRegion().length > 0;
+}
+
+/**
+ * Base URL for public assets (e.g. https://api.example.com or CloudFront URL).
+ * When set, upload responses return full URLs so project images work from any origin.
+ */
+function getAssetsBaseUrl(): string {
+  return process.env.ASSETS_BASE_URL?.trim() ?? "";
+}
+
+export function getPublicPath(key: string): string {
+  const base = getAssetsBaseUrl();
+  if (base) {
+    const normalized = base.replace(/\/$/, "");
+    return `${normalized}/${key.startsWith("/") ? key.slice(1) : key}`;
+  }
+  return `/${key.startsWith("/") ? key.slice(1) : key}`;
 }
 
 function getS3Client(): any {

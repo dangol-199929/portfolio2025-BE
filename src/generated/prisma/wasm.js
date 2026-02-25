@@ -119,6 +119,21 @@ exports.Prisma.SettingsScalarFieldEnum = {
   resumePath: 'resumePath'
 };
 
+exports.Prisma.AboutScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  email: 'email',
+  education: 'education',
+  availability: 'availability',
+  bio: 'bio',
+  image: 'image'
+};
+
+exports.Prisma.ContactScalarFieldEnum = {
+  id: 'id',
+  items: 'items'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -133,7 +148,9 @@ exports.Prisma.QueryMode = {
 exports.Prisma.ModelName = {
   Experience: 'Experience',
   Project: 'Project',
-  Settings: 'Settings'
+  Settings: 'Settings',
+  About: 'About',
+  Contact: 'Contact'
 };
 /**
  * Create the Client
@@ -183,13 +200,13 @@ const config = {
       }
     }
   },
-  "inlineSchema": "generator client {\n  provider = \"prisma-client-js\"\n  output   = \"../src/generated/prisma\"\n}\n\ndatasource db {\n  provider = \"postgresql\"\n  url      = env(\"DATABASE_URL\")\n}\n\nmodel Experience {\n  id          String\n  title       String\n  company     String\n  period      String\n  description String\n  side        String // 'left' | 'right'\n\n  @@id([id])\n  @@map(\"experiences\")\n}\n\nmodel Project {\n  id              String\n  title           String\n  description     String\n  fullDescription String\n  image           String\n  tags            String // JSON array\n  liveUrl         String\n  githubUrl       String\n  metrics         String // JSON array\n\n  @@id([id])\n  @@map(\"projects\")\n}\n\nmodel Settings {\n  id         Int    @id @default(1)\n  resumePath String @default(\"/resume/Resume.pdf\")\n\n  @@map(\"settings\")\n}\n",
-  "inlineSchemaHash": "8584be1a1ba4249343a95b535a55124ad3049d8594a0ebf65d9fefcde4dd9bd1",
+  "inlineSchema": "generator client {\n  provider = \"prisma-client-js\"\n  output   = \"../src/generated/prisma\"\n}\n\ndatasource db {\n  provider = \"postgresql\"\n  url      = env(\"DATABASE_URL\")\n}\n\nmodel Experience {\n  id          String\n  title       String\n  company     String\n  period      String\n  description String\n  side        String // 'left' | 'right'\n\n  @@id([id])\n  @@map(\"experiences\")\n}\n\nmodel Project {\n  id              String\n  title           String\n  description     String\n  fullDescription String\n  image           String\n  tags            String // JSON array\n  liveUrl         String\n  githubUrl       String\n  metrics         String // JSON array\n\n  @@id([id])\n  @@map(\"projects\")\n}\n\nmodel Settings {\n  id         Int    @id @default(1)\n  resumePath String @default(\"/resume/Resume.pdf\")\n\n  @@map(\"settings\")\n}\n\nmodel About {\n  id           Int    @id @default(1)\n  name         String @default(\"\")\n  email        String @default(\"\")\n  education    String @default(\"\")\n  availability String @default(\"\")\n  bio          String @default(\"[]\") // JSON array of paragraph strings\n  image        String @default(\"\")\n\n  @@map(\"about\")\n}\n\nmodel Contact {\n  id    Int    @id @default(1)\n  items String @default(\"[]\") // JSON array of { label, value, href, target?, download? }\n\n  @@map(\"contact\")\n}\n",
+  "inlineSchemaHash": "27b3654bfd791ee5a2078660548ecc741b50c17e1550b42223bc6f3d8c64a8e7",
   "copyEngine": true
 }
 config.dirname = '/'
 
-config.runtimeDataModel = JSON.parse("{\"models\":{\"Experience\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"title\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"company\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"period\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"description\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"side\",\"kind\":\"scalar\",\"type\":\"String\"}],\"dbName\":\"experiences\"},\"Project\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"title\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"description\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"fullDescription\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"image\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"tags\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"liveUrl\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"githubUrl\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"metrics\",\"kind\":\"scalar\",\"type\":\"String\"}],\"dbName\":\"projects\"},\"Settings\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"resumePath\",\"kind\":\"scalar\",\"type\":\"String\"}],\"dbName\":\"settings\"}},\"enums\":{},\"types\":{}}")
+config.runtimeDataModel = JSON.parse("{\"models\":{\"Experience\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"title\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"company\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"period\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"description\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"side\",\"kind\":\"scalar\",\"type\":\"String\"}],\"dbName\":\"experiences\"},\"Project\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"title\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"description\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"fullDescription\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"image\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"tags\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"liveUrl\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"githubUrl\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"metrics\",\"kind\":\"scalar\",\"type\":\"String\"}],\"dbName\":\"projects\"},\"Settings\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"resumePath\",\"kind\":\"scalar\",\"type\":\"String\"}],\"dbName\":\"settings\"},\"About\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"email\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"education\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"availability\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"bio\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"image\",\"kind\":\"scalar\",\"type\":\"String\"}],\"dbName\":\"about\"},\"Contact\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"items\",\"kind\":\"scalar\",\"type\":\"String\"}],\"dbName\":\"contact\"}},\"enums\":{},\"types\":{}}")
 defineDmmfProperty(exports.Prisma, config.runtimeDataModel)
 config.engineWasm = {
   getRuntime: async () => require('./query_engine_bg.js'),

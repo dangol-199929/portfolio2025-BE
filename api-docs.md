@@ -1,6 +1,6 @@
 # API Documentation
 
-This document describes the portfolio API: data structures (matching the current JSON files), request/response shapes, and error handling.
+This document describes the portfolio API: data structures, request/response shapes, and error handling. It also covers **About us**, **Contact us**, and **Personal info** endpoints now served by this backend.
 
 **Base path:** `/api` (relative to the app origin)
 
@@ -120,6 +120,70 @@ Matches `data/settings.json` (single object). Used by the resume API.
 ```json
 {
   "resumePath": "/resume/Resume.pdf"
+}
+```
+
+---
+
+### 1.4 Contact (display settings)
+
+Contact information is now served by `GET /api/contact` and updated by `PUT /api/contact`.
+
+Each item:
+
+| Field      | Type   | Description                                      |
+| ---------- | ------ | ------------------------------------------------ |
+| `label`    | string | Display label (e.g. `"Email"`, `"LinkedIn"`).    |
+| `value`    | string | Display value or CTA text.                       |
+| `href`     | string | URL (`mailto:...`, profile URL, or resume path). |
+| `target`   | string | Optional link target (`"_blank"` or `"_self"`).  |
+| `download` | string | Optional; filename for resume download links.    |
+
+**Example:**
+
+```json
+[
+  {
+    "label": "Email",
+    "value": "name@example.com",
+    "href": "mailto:name@example.com",
+    "target": "_blank"
+  },
+  {
+    "label": "Resume",
+    "value": "Download Resume",
+    "href": "/resume/Resume.pdf",
+    "target": "_self",
+    "download": "Resume.pdf"
+  }
+]
+```
+
+---
+
+### 1.5 About (display settings)
+
+About information is now served by `GET /api/about` and updated by `PUT /api/about`.
+
+| Field          | Type     | Description                         |
+| -------------- | -------- | ----------------------------------- |
+| `name`         | string   | Full name.                          |
+| `email`        | string   | Email address.                      |
+| `education`    | string   | Education line.                     |
+| `availability` | string   | Availability/status text.           |
+| `bio`          | string[] | About paragraph list.               |
+| `image`        | string   | Optional profile image path or URL. |
+
+**Example:**
+
+```json
+{
+  "name": "Sandeep Dangol",
+  "email": "sandeep@example.com",
+  "education": "BSc Computing (UCSI University)",
+  "availability": "Open to opportunities",
+  "bio": ["Paragraph 1", "Paragraph 2"],
+  "image": "/uploads/me.jpg"
 }
 ```
 
@@ -332,7 +396,7 @@ If the settings file is missing, the API still returns `200` with default: `{ "r
 
 #### POST `/api/resume`
 
-Uploads a new PDF and updates `data/settings.json` with the new path.
+Uploads a new PDF and updates resume settings.
 
 - **Request:** `Content-Type: multipart/form-data`
 - **Body:** Form field `file` — PDF file. Only `application/pdf` allowed.
@@ -346,6 +410,8 @@ Uploads a new PDF and updates `data/settings.json` with the new path.
   "success": true
 }
 ```
+
+When S3 is configured and `ASSETS_BASE_URL` is set, `resumePath` may be returned as a full URL (for example, `https://api.example.com/resume/resume-<timestamp>.pdf`).
 
 - **Errors:**
   - `400` — `{ "error": "No file uploaded" }`
@@ -375,10 +441,56 @@ Uploads an image for use (e.g. project images). Only POST is supported.
 }
 ```
 
+When S3 is configured and `ASSETS_BASE_URL` is set, `path` may be returned as a full URL (for example, `https://api.example.com/uploads/project-<timestamp>.<ext>`).
+
 - **Errors:**
   - `400` — `{ "error": "No file uploaded" }`
   - `400` — `{ "error": "Only image files are allowed" }`
-  - `500` — `{ "error": "Failed to upload file" }`
+  - `500` — `{ "error": "Failed to upload image" }`
+
+---
+
+### 3.5 About
+
+**Base path:** `/api/about`
+
+#### GET `/api/about`
+
+Returns current about data.
+
+- **Response:** `200 OK`
+- **Body:** [About](#15-about-display-settings) object.
+
+#### PUT `/api/about`
+
+Updates about data (partial update supported).
+
+- **Request:** `Content-Type: application/json`
+- **Body:** Any subset of [About](#15-about-display-settings) fields.
+- **Response:** `200 OK`
+- **Body:** Updated [About](#15-about-display-settings) object.
+
+---
+
+### 3.6 Contact
+
+**Base path:** `/api/contact`
+
+#### GET `/api/contact`
+
+Returns current contact items.
+
+- **Response:** `200 OK`
+- **Body:** Array of [Contact](#14-contact-display-settings) items.
+
+#### PUT `/api/contact`
+
+Replaces contact items.
+
+- **Request:** `Content-Type: application/json`
+- **Body:** Array of [Contact](#14-contact-display-settings) items.
+- **Response:** `200 OK`
+- **Body:** Updated array of [Contact](#14-contact-display-settings) items.
 
 ---
 
@@ -390,5 +502,7 @@ Uploads an image for use (e.g. project images). Only POST is supported.
 | `/api/projects`    | GET, POST, PUT, DELETE | Array (GET), single Project (POST/PUT), `{ success: true }` (DELETE)    | `{ "error": string }` |
 | `/api/resume`      | GET, POST              | `{ resumePath }` (GET), `{ resumePath, success: true }` (POST)          | `{ "error": string }` |
 | `/api/upload`      | POST                   | `{ path, success: true }`                                               | `{ "error": string }` |
+| `/api/about`       | GET, PUT               | About object                                                            | `{ "error": string }` |
+| `/api/contact`     | GET, PUT               | Contact item array                                                      | `{ "error": string }` |
 
 All error responses use the same structure: a single key `error` with a string message. The HTTP status code indicates 400, 404, or 500 as described above.

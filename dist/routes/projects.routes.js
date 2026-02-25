@@ -38,11 +38,21 @@ const express_1 = require("express");
 const zod_1 = require("zod");
 const validate_1 = require("../middleware/validate");
 const ctrl = __importStar(require("../controllers/projects.controller"));
+function isUploadImagePath(value) {
+    // Accept relative API-served path or absolute URL that points to uploads.
+    return (value.startsWith("/uploads/") || /^https?:\/\/.+\/uploads\/.+/.test(value));
+}
+const imageSchema = zod_1.z
+    .string()
+    .optional()
+    .refine((value) => value == null || value === "" || isUploadImagePath(value), {
+    message: "image must be an upload path or URL (use /api/upload first, then pass returned path)",
+});
 const postSchema = zod_1.z.object({
     title: zod_1.z.string().optional(),
     description: zod_1.z.string().optional(),
     fullDescription: zod_1.z.string().optional(),
-    image: zod_1.z.string().optional(),
+    image: imageSchema,
     tags: zod_1.z.array(zod_1.z.string()).optional(),
     liveUrl: zod_1.z.string().optional(),
     githubUrl: zod_1.z.string().optional(),
@@ -53,7 +63,7 @@ const putSchema = zod_1.z.object({
     title: zod_1.z.string().optional(),
     description: zod_1.z.string().optional(),
     fullDescription: zod_1.z.string().optional(),
-    image: zod_1.z.string().optional(),
+    image: imageSchema,
     tags: zod_1.z.array(zod_1.z.string()).optional(),
     liveUrl: zod_1.z.string().optional(),
     githubUrl: zod_1.z.string().optional(),

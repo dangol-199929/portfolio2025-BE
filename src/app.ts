@@ -1,5 +1,7 @@
 import express from "express";
 import cors from "cors";
+import { aboutRouter } from "./routes/about.routes";
+import { contactRouter } from "./routes/contact.routes";
 import { experiencesRouter } from "./routes/experiences.routes";
 import { projectsRouter } from "./routes/projects.routes";
 import { resumeRouter } from "./routes/resume.routes";
@@ -52,6 +54,8 @@ app.get("/health", (_req, res) => {
 app.get("/uploads/:fileName", getUploadedFile);
 app.get("/resume/:fileName", getResumeFile);
 
+app.use("/api", aboutRouter);
+app.use("/api", contactRouter);
 app.use("/api", experiencesRouter);
 app.use("/api", projectsRouter);
 app.use("/api", resumeRouter);
