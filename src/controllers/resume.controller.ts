@@ -3,6 +3,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { isS3Configured, uploadObject } from "../lib/objectStorage";
 import { getResumePath, setResumePath } from "../db/settings.repository";
+import { logger } from "../utils/logger";
 
 const ALLOWED_MIME = "application/pdf";
 
@@ -69,11 +70,17 @@ export async function postResume(
 
     await setResumePath(resumePath);
     res.status(200).json({ resumePath, success: true });
-  } catch {
-    const err = new Error("Failed to upload resume") as Error & {
-      statusCode?: number;
-      expose?: boolean;
-    };
+  } catch (e) {
+    const cause = e instanceof Error ? e : new Error(String(e));
+    logger.error("Resume upload failed", {
+      message: cause.message,
+      stack: cause.stack,
+    });
+    const err = new Error(
+      process.env.NODE_ENV === "production"
+        ? "Failed to upload resume"
+        : `Failed to upload resume: ${cause.message}`,
+    ) as Error & { statusCode?: number; expose?: boolean };
     err.statusCode = 500;
     err.expose = true;
     next(err);

@@ -9,7 +9,7 @@
   "containerDefinitions": [
     {
       "name": "api",
-      "image": "508261694268.dkr.ecr.us-east-1.amazonaws.com/snippet-manager-api:latest",
+      "image": "508261694268.dkr.ecr.us-east-1.amazonaws.com/snippet-manager-api:v20260225110100",
       "essential": true,
       "portMappings": [
         {
@@ -37,7 +37,7 @@
         },
         {
           "name": "CORS_ORIGIN_ALLOWLIST",
-          "value": "*"
+          "value": "http://localhost:3100,https://dqr1j1isuojod.cloudfront.net"
         }
       ],
       "secrets": [

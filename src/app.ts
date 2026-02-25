@@ -8,17 +8,41 @@ import { getResumeFile, getUploadedFile } from "./controllers/files.controller";
 import { errorHandler } from "./middleware/errorHandler";
 
 const app = express();
-
-app.use(express.json());
+const isProduction = process.env.NODE_ENV === "production";
+const allowAllCors = process.env.CORS_ALLOW_ALL === "1";
 const corsAllowlist = (process.env.CORS_ORIGIN_ALLOWLIST ?? "")
   .split(",")
   .map((origin) => origin.trim())
   .filter((origin) => origin.length > 0);
 
+if (isProduction && !allowAllCors && corsAllowlist.length === 0) {
+  throw new Error(
+    "CORS_ORIGIN_ALLOWLIST is required in production unless CORS_ALLOW_ALL=1 is set.",
+  );
+}
+
+app.use(express.json());
 app.use(
   cors({
-    origin: true,
-    // origin: corsAllowlist.length > 0 ? corsAllowlist : true,
+    origin: (origin, callback) => {
+      if (!origin) {
+        // Allow curl/postman/server-to-server requests without Origin header.
+        callback(null, true);
+        return;
+      }
+
+      if (allowAllCors) {
+        callback(null, true);
+        return;
+      }
+
+      if (corsAllowlist.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error("Origin not allowed by CORS"));
+    },
   }),
 );
 
