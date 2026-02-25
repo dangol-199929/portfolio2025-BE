@@ -6,3 +6,5 @@ scripts
 fe-documentation.md
 guide
 .hide
+infra/aws/rendered/
+uploads/
